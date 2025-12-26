@@ -189,6 +189,47 @@ class ApiClient {
   async researchTopic(query: string, urls?: string[], maxSources = 5) {
     return this.client.post('/research/topic', { query, urls, max_sources: maxSources });
   }
+
+  // Extraction API
+  async extractData(file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.client.post('/extraction/extract', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  }
+
+  // Export API
+  async exportData(data: any, format: 'csv' | 'json' | 'excel' | 'xml' | 'html') {
+    const response = await this.client.post(`/export/${format}`, data, {
+      responseType: 'blob', // Important for file downloads
+    });
+
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+
+    // Set filename based on format
+    const extensions = {
+      csv: 'csv',
+      json: 'json',
+      excel: 'xlsx',
+      xml: 'xml',
+      html: 'html'
+    };
+
+    link.setAttribute('download', `export.${extensions[format]}`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    return response;
+  }
 }
 
 // Export singleton instance

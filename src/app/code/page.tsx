@@ -123,7 +123,7 @@ export default function CodePage() {
       {/* Left Panel - Controls */}
       <div className="w-80 space-y-4">
         {/* Tab Selection */}
-        <Card className="glass-card">
+        <Card className="liquid-glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <Code className="h-5 w-5 mr-2 text-primary" />
@@ -156,7 +156,7 @@ export default function CodePage() {
         </Card>
 
         {/* Action Form */}
-        <Card className="glass-card">
+        <Card className="liquid-glass">
           <CardContent className="p-4">
             {activeTab === 'generate' && <GenerateForm onSubmit={handleGenerate} isLoading={isLoading} />}
             {activeTab === 'review' && <ReviewForm onSubmit={handleReview} isLoading={isLoading} />}
@@ -168,7 +168,7 @@ export default function CodePage() {
 
       {/* Right Panel - Results */}
       <div className="flex-1">
-        <Card className="h-full glass-card flex flex-col">
+        <Card className="h-full liquid-glass flex flex-col">
           <CardHeader className="border-b border-border/50">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
@@ -198,8 +198,8 @@ export default function CodePage() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <Code className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-semibold mb-2">Ready to Assist</h3>
-                    <p className="text-muted-foreground">
+                    <h3 className="text-lg font-semibold mb-2 text-white">Ready to Assist</h3>
+                    <p className="text-slate-300">
                       Select an action and provide your code or description to get AI assistance.
                     </p>
                   </div>
@@ -210,7 +210,7 @@ export default function CodePage() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="animate-pulse-glow w-8 h-8 bg-primary rounded-full mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">AI is analyzing your code...</p>
+                    <p className="text-slate-300">AI is analyzing your code...</p>
                   </div>
                 </div>
               )}
@@ -219,7 +219,7 @@ export default function CodePage() {
                 <div className="space-y-4 animate-fade-in">
                   {result.type === 'generate' && (
                     <div>
-                      <h4 className="font-semibold mb-2">Generated Code ({result.language})</h4>
+                      <h4 className="font-semibold mb-2 text-white">Generated Code ({result.language})</h4>
                       <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
                         <code>{result.content}</code>
                       </pre>
@@ -228,8 +228,8 @@ export default function CodePage() {
 
                   {result.type === 'review' && (
                     <div>
-                      <h4 className="font-semibold mb-2">Code Review Results</h4>
-                      <div className="prose prose-sm max-w-none">
+                      <h4 className="font-semibold mb-2 text-white">Code Review Results</h4>
+                      <div className="prose prose-sm max-w-none text-slate-200">
                         <div dangerouslySetInnerHTML={{
                           __html: result.review.replace(/\n/g, '<br>')
                         }} />
@@ -239,8 +239,8 @@ export default function CodePage() {
 
                   {result.type === 'explain' && (
                     <div>
-                      <h4 className="font-semibold mb-2">Code Explanation ({result.level} level)</h4>
-                      <div className="prose prose-sm max-w-none">
+                      <h4 className="font-semibold mb-2 text-white">Code Explanation ({result.level} level)</h4>
+                      <div className="prose prose-sm max-w-none text-slate-200">
                         <div dangerouslySetInnerHTML={{
                           __html: result.explanation.replace(/\n/g, '<br>')
                         }} />
@@ -250,7 +250,7 @@ export default function CodePage() {
 
                   {result.type === 'fix' && (
                     <div>
-                      <h4 className="font-semibold mb-2">Fixed Code ({result.language})</h4>
+                      <h4 className="font-semibold mb-2 text-white">Fixed Code ({result.language})</h4>
                       <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
                         <code>{result.result}</code>
                       </pre>
@@ -292,7 +292,7 @@ function GenerateForm({ onSubmit, isLoading }: { onSubmit: (data: GenerateForm) 
         <Input
           id="language"
           placeholder="python"
-          className="glass"
+          className="liquid-glass"
           {...register('language')}
         />
       </div>
@@ -358,7 +358,7 @@ function ReviewForm({ onSubmit, isLoading }: { onSubmit: (data: ReviewForm) => v
         <Input
           id="language"
           placeholder="python"
-          className="glass"
+          className="liquid-glass"
           {...register('language')}
         />
       </div>
@@ -368,7 +368,7 @@ function ReviewForm({ onSubmit, isLoading }: { onSubmit: (data: ReviewForm) => v
         <Input
           id="focus"
           placeholder="e.g., security, performance, readability"
-          className="glass"
+          className="liquid-glass"
           {...register('focus')}
         />
       </div>
@@ -424,7 +424,7 @@ function ExplainForm({ onSubmit, isLoading }: { onSubmit: (data: ExplainForm) =>
         <Input
           id="language"
           placeholder="python"
-          className="glass"
+          className="liquid-glass"
           {...register('language')}
         />
       </div>
@@ -505,7 +505,7 @@ function FixForm({ onSubmit, isLoading }: { onSubmit: (data: FixForm) => void; i
         <Input
           id="language"
           placeholder="python"
-          className="glass"
+          className="liquid-glass"
           {...register('language')}
         />
       </div>

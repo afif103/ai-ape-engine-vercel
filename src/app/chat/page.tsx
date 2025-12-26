@@ -138,7 +138,7 @@ export default function ChatPage() {
     <div className="flex h-full gap-4 p-4">
       {/* Conversations Panel - Algo Trading Style */}
       <div className="w-80 space-y-4">
-        <Card className="glass-card">
+        <Card className="liquid-glass">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center">
@@ -220,7 +220,7 @@ export default function ChatPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {selectedConversationId && currentConversation ? (
-          <Card className="flex-1 flex flex-col glass-card">
+          <Card className="flex-1 flex flex-col liquid-glass">
             <CardHeader className="border-b border-border/50">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center">
@@ -375,7 +375,7 @@ export default function ChatPage() {
             </div>
           </Card>
         ) : (
-          <Card className="flex-1 flex items-center justify-center glass-card">
+          <Card className="flex-1 flex items-center justify-center liquid-glass">
             <div className="text-center max-w-md">
               <Bot className="h-20 w-20 mx-auto mb-6 text-primary glow" />
               <h3 className="text-2xl font-bold mb-3">Welcome to APE Chat</h3>

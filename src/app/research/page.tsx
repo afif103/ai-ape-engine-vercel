@@ -134,7 +134,7 @@ export default function ResearchPage() {
       {/* Left Panel - Controls */}
       <div className="w-80 space-y-4">
         {/* Tab Selection */}
-        <Card className="glass-card">
+        <Card className="liquid-glass">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <Search className="h-5 w-5 mr-2 text-primary" />
@@ -167,7 +167,7 @@ export default function ResearchPage() {
         </Card>
 
         {/* Action Form */}
-        <Card className="glass-card">
+        <Card className="liquid-glass">
           <CardContent className="p-4">
             {activeTab === 'scrape' && (
               <ScrapeForm onSubmit={handleScrape} isLoading={isLoading} />
@@ -188,7 +188,7 @@ export default function ResearchPage() {
 
       {/* Right Panel - Results */}
       <div className="flex-1">
-        <Card className="h-full glass-card flex flex-col">
+        <Card className="h-full liquid-glass flex flex-col">
           <CardHeader className="border-b border-border/50">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center">
@@ -220,8 +220,8 @@ export default function ResearchPage() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <Search className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-semibold mb-2">Ready to Research</h3>
-                    <p className="text-muted-foreground">
+                    <h3 className="text-lg font-semibold mb-2 text-white">Ready to Research</h3>
+                    <p className="text-slate-300">
                       {activeTab === 'scrape'
                         ? 'Enter a URL to scrape content from a website.'
                         : 'Enter a research query and URLs to get AI-powered analysis.'
@@ -235,7 +235,7 @@ export default function ResearchPage() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <div className="animate-pulse-glow w-8 h-8 bg-primary rounded-full mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">
+                    <p className="text-slate-300">
                       {activeTab === 'scrape' ? 'Scraping website...' : 'Researching across sources...'}
                     </p>
                   </div>
@@ -246,7 +246,7 @@ export default function ResearchPage() {
               {scrapeResult && activeTab === 'scrape' && (
                 <div className="space-y-4 animate-fade-in">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-semibold">Scraped Content</h4>
+                    <h4 className="font-semibold text-white">Scraped Content</h4>
                     <a
                       href={scrapeResult.url}
                       target="_blank"
@@ -259,7 +259,7 @@ export default function ResearchPage() {
                   </div>
 
                   <div className="bg-muted/50 p-4 rounded-lg">
-                    <div className="prose prose-sm max-w-none">
+                    <div className="prose prose-sm max-w-none text-slate-200">
                       <div dangerouslySetInnerHTML={{
                         __html: scrapeResult.content.replace(/\n/g, '<br>')
                       }} />
@@ -268,11 +268,11 @@ export default function ResearchPage() {
 
                   {scrapeResult.metadata && (
                     <div className="mt-4">
-                      <h5 className="font-medium mb-2">Metadata</h5>
+                      <h5 className="font-medium mb-2 text-white">Metadata</h5>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         {Object.entries(scrapeResult.metadata).map(([key, value]) => (
-                          <div key={key} className="bg-muted/30 p-2 rounded">
-                            <span className="font-medium">{key}:</span> {String(value)}
+                          <div key={key} className="bg-muted/30 p-2 rounded text-slate-300">
+                            <span className="font-medium text-white">{key}:</span> {String(value)}
                           </div>
                         ))}
                       </div>
@@ -285,16 +285,16 @@ export default function ResearchPage() {
               {researchResult && activeTab === 'research' && (
                 <div className="space-y-6 animate-fade-in">
                   <div>
-                    <h4 className="font-semibold mb-2">Research Query</h4>
-                    <p className="text-muted-foreground bg-muted/30 p-3 rounded-lg">
+                    <h4 className="font-semibold mb-2 text-white">Research Query</h4>
+                    <p className="text-slate-300 bg-muted/30 p-3 rounded-lg">
                       {researchResult.query}
                     </p>
                   </div>
 
                   <div>
-                    <h4 className="font-semibold mb-2">AI Synthesis</h4>
+                    <h4 className="font-semibold mb-2 text-white">AI Synthesis</h4>
                     <div className="bg-muted/50 p-4 rounded-lg">
-                       <div className="prose prose-sm max-w-none">
+                       <div className="prose prose-sm max-w-none text-slate-200">
                          <div dangerouslySetInnerHTML={{
                            __html: researchResult.synthesis.replace(/\n/g, '<br>')
                          }} />
@@ -303,13 +303,13 @@ export default function ResearchPage() {
                     </div>
 
                    <div>
-                     <h4 className="font-semibold mb-2">Sources ({researchResult.sources?.length || 0})</h4>
+                     <h4 className="font-semibold mb-2 text-white">Sources ({researchResult.sources?.length || 0})</h4>
                      <div className="space-y-2">
                        {researchResult.sources?.map((source: any, index: number) => (
                          <div key={index} className="flex items-center justify-between bg-muted/30 p-3 rounded-lg">
                            <div className="flex items-center space-x-2">
                              <Badge variant="secondary">{index + 1}</Badge>
-                             <span className="font-medium">{source.title || 'Untitled'}</span>
+                             <span className="font-medium text-white">{source.title || 'Untitled'}</span>
                            </div>
                            <a
                              href={source.url}
@@ -347,7 +347,7 @@ function ScrapeForm({ onSubmit, isLoading }: { onSubmit: (data: ScrapeForm) => v
           id="url"
           type="url"
           placeholder="https://example.com"
-          className="glass"
+          className="liquid-glass"
           {...register('url')}
         />
         {errors.url && (
@@ -428,7 +428,7 @@ function ResearchForm({
                 placeholder="https://example.com"
                 value={url}
                 onChange={(e) => onUpdateUrl(index, e.target.value)}
-                className="glass flex-1"
+                className="liquid-glass flex-1"
               />
               {urlInputs.length > 1 && (
                 <Button

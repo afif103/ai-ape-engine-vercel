@@ -42,7 +42,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     try {
       await registerUser(data.email, data.password, data.name);
-      router.push('/chat');
+      router.push('/dashboard');
     } catch (error) {
       // Error is handled by the store
     }
@@ -77,15 +77,15 @@ export default function RegisterPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">AI Dashboard</h1>
-              <p className="text-sm text-slate-400">Create your account</p>
+              <p className="text-sm text-slate-300">Create your account</p>
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Get Started</h2>
-          <p className="text-slate-400">Create your account to begin</p>
+          <p className="text-slate-300">Create your account to begin</p>
         </div>
 
         {/* Form */}
-        <Card className="bg-slate-900/50 border-slate-700/50 p-6">
+        <Card className="bg-slate-900/70 border-slate-700/70 p-6 backdrop-blur-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-white">Full Name</Label>
@@ -183,13 +183,13 @@ export default function RegisterPage() {
 
         {/* Links */}
         <div className="text-center space-y-2">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-300">
             Already have an account?{' '}
             <Link href="/login" className="text-primary hover:text-cyan-400 transition-colors font-mono">
               ACCESS SYSTEM
             </Link>
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-300">
             <Link href="/" className="hover:text-primary transition-colors font-mono">
               RETURN TO SURFACE
             </Link>
