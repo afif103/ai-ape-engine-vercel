@@ -21,6 +21,7 @@ import {
   CheckCircle,
   X
 } from 'lucide-react';
+import InstructionPanel from '@/components/InstructionPanel';
 import { apiClient } from '@/lib/api';
 
 // Form schemas
@@ -32,11 +33,14 @@ type ExtractForm = z.infer<typeof extractSchema>;
 
 export default function ExtractionPage() {
   const [result, setResult] = useState<any>(null);
+  const [transformedData, setTransformedData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string>('');
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<any>(null);
+  const [processingJob, setProcessingJob] = useState<any>(null);
+  const [statusPolling, setStatusPolling] = useState<NodeJS.Timeout | null>(null);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -85,11 +89,65 @@ export default function ExtractionPage() {
     }
   };
 
+  const pollProcessingStatus = async (jobId: string) => {
+    try {
+      console.log('Polling status for job:', jobId);
+      // Use the API client for consistent authentication and base URL
+      const response = await apiClient.makeRequest('get', `/processing/status/${jobId}`);
+      const statusData = response.data;
+      console.log('Status response:', statusData);
+
+      if (statusData.status === 'completed') {
+        // Processing complete, get results
+        const resultData = {
+          ...statusData.result,
+          metadata: {
+            ...statusData.result.metadata,
+            file_type: uploadedFile?.type,
+            file_size: uploadedFile?.size,
+            file_name: uploadedFile?.name,
+            job_id: jobId,
+            processing_time: statusData.duration,
+            aws_cost: statusData.cost_estimate
+          },
+          timestamp: Date.now()
+        };
+
+        setResult(resultData);
+        setProcessingJob(null);
+        setIsLoading(false);
+
+        if (statusPolling) {
+          clearInterval(statusPolling);
+          setStatusPolling(null);
+        }
+
+      } else if (statusData.status === 'failed') {
+        // Processing failed
+        setUploadError(`Processing failed: ${statusData.error}`);
+        setProcessingJob(null);
+        setIsLoading(false);
+
+        if (statusPolling) {
+          clearInterval(statusPolling);
+          setStatusPolling(null);
+        }
+
+      } else {
+        // Still processing, update status
+        setProcessingJob(statusData);
+      }
+    } catch (error) {
+      console.error('Status polling failed:', error);
+    }
+  };
+
   const handleExtract = async () => {
     if (!uploadedFile) return;
 
     setIsLoading(true);
     setResult(null);
+    setProcessingJob(null);
     setUploadError('');
 
     try {
@@ -97,39 +155,28 @@ export default function ExtractionPage() {
       const extractResponse = await apiClient.extractData(uploadedFile);
       console.log('API Response:', extractResponse.data);
 
-      // Add file metadata to the response
-      const resultData = {
-        ...extractResponse.data,
-        metadata: {
-          ...extractResponse.data.metadata,
-          file_type: uploadedFile.type,
-          file_size: uploadedFile.size,
-          file_name: uploadedFile.name
-        },
-        // Add timestamp to ensure re-render
-        timestamp: Date.now()
-      };
-      console.log('Final result data:', resultData);
+      const jobId = extractResponse.data.job_id;
 
-      // Use flushSync for synchronous state updates
-      flushSync(() => {
-        setResult(resultData);
-      });
+      // Start polling for status updates
+      console.log('Starting polling for job:', jobId);
+      setProcessingJob({ job_id: jobId, status: 'queued', progress: 0 });
+
+      const pollingInterval = setInterval(() => {
+        pollProcessingStatus(jobId);
+      }, 2000); // Poll every 2 seconds
+
+      setStatusPolling(pollingInterval);
+
     } catch (error: any) {
       console.error('Extraction failed:', error);
 
       // Show detailed error information
       const errorMessage = error.response?.data?.detail ||
-                          error.message ||
-                          'Network error occurred';
+                           error.message ||
+                           'Network error occurred';
 
       setUploadError(`Extraction failed: ${errorMessage}`);
-      setResult(null);
-    } finally {
-      // Use flushSync for synchronous loading state update
-      flushSync(() => {
-        setIsLoading(false);
-      });
+      setIsLoading(false);
     }
   };
 
@@ -162,6 +209,9 @@ export default function ExtractionPage() {
   };
 
   const downloadResult = () => exportData('json');
+
+  // Get the data to display (transformed if available, otherwise original)
+  const displayData = transformedData || editedData || result;
 
   return (
     <div className="flex h-full gap-4 p-4">
@@ -234,12 +284,31 @@ export default function ExtractionPage() {
                           </div>
                           <div>
                             <p className="text-sm text-white font-medium truncate max-w-48">{uploadedFile.name}</p>
-                            <p className="text-xs text-slate-400">
-                              {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • {uploadedFile.type.split('/')[1].toUpperCase()}
-                            </p>
-                            {isLoading && (
-                              <p className="text-xs text-yellow-400 mt-1">Processing...</p>
-                            )}
+                             <p className="text-xs text-slate-400">
+                               {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB • {uploadedFile.type.split('/')[1].toUpperCase()}
+                             </p>
+                             {processingJob && (
+                               <div className="mt-2">
+                                 <div className="flex items-center justify-between text-xs mb-1">
+                                   <span className="text-slate-400">{processingJob.current_step || 'Processing...'}</span>
+                                   <span className="text-slate-400">{processingJob.progress || 0}%</span>
+                                 </div>
+                                 <div className="w-full bg-slate-700 rounded-full h-1">
+                                   <div
+                                     className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                                     style={{ width: `${processingJob.progress || 0}%` }}
+                                   ></div>
+                                 </div>
+                                 {processingJob.aws_services_used && processingJob.aws_services_used.length > 0 && (
+                                   <p className="text-xs text-purple-400 mt-1">
+                                     Using: {processingJob.aws_services_used.join(', ')}
+                                   </p>
+                                 )}
+                               </div>
+                             )}
+                             {isLoading && !processingJob && (
+                               <p className="text-xs text-yellow-400 mt-1">Starting processing...</p>
+                             )}
                           </div>
                         </div>
                         {!isLoading && (
@@ -394,7 +463,7 @@ export default function ExtractionPage() {
                      </h4>
                      <div className="bg-muted/50 p-4 rounded-lg">
                        <div className="prose prose-sm max-w-none text-slate-200">
-                         {result.text ? (
+                          {displayData.text ? (
                            <div
                              className="p-3 rounded bg-slate-800/30 border border-slate-600/30"
                              dangerouslySetInnerHTML={{
@@ -411,14 +480,14 @@ export default function ExtractionPage() {
                     </div>
 
                     {/* Extracted Tables */}
-                    {result.tables && result.tables.length > 0 && (
+                    {displayData.tables && displayData.tables.length > 0 && (
                       <div>
                         <h4 className="font-semibold mb-3 text-white flex items-center">
                           <File className="h-4 w-4 mr-2" />
-                          Extracted Tables ({result.tables.length})
+                          Extracted Tables ({displayData.tables.length})
                         </h4>
                         <div className="space-y-4">
-                          {result.tables.map((table: any, tableIndex: number) => (
+                          {displayData.tables.map((table: any, tableIndex: number) => (
                             <div key={tableIndex} className="bg-muted/50 p-4 rounded-lg">
                               <div className="flex items-center justify-between mb-3">
                                 <h5 className="font-medium text-white">{table.name || `Table ${tableIndex + 1}`}</h5>
@@ -461,10 +530,18 @@ export default function ExtractionPage() {
                           ))}
                         </div>
                       </div>
-                    )}
+                     )}
+
+                    {/* AI Instruction Panel */}
+                    <div className="mt-6">
+                      <InstructionPanel
+                        extractedData={displayData}
+                        onDataTransform={setTransformedData}
+                      />
+                    </div>
 
                     {/* Data Editing */}
-                    {result.tables && result.tables.length > 0 && (
+                    {displayData.tables && displayData.tables.length > 0 && (
                       <div>
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-semibold text-white flex items-center">
@@ -545,12 +622,46 @@ export default function ExtractionPage() {
                       </div>
                     )}
 
+                    {/* Cost Tracking */}
+                    {displayData.metadata && displayData.metadata.aws_cost && (
+                     <div>
+                       <h4 className="font-semibold mb-3 text-white flex items-center">
+                         <Brain className="h-4 w-4 mr-2" />
+                         AWS Cost Tracking
+                       </h4>
+                       <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-lg p-4">
+                         <div className="grid grid-cols-2 gap-4">
+                           <div>
+                             <div className="text-sm text-slate-400">Processing Cost</div>
+                              <div className="text-lg font-bold text-green-400">
+                                ${displayData.metadata.aws_cost.toFixed(4)}
+                              </div>
+                           </div>
+                           <div>
+                             <div className="text-sm text-slate-400">Processing Time</div>
+                             <div className="text-lg font-bold text-blue-400">
+                               {displayData.metadata.processing_time ? `${displayData.metadata.processing_time.toFixed(1)}s` : 'N/A'}
+                             </div>
+                           </div>
+                         </div>
+                         {displayData.metadata.aws_service && (
+                           <div className="mt-3 pt-3 border-t border-purple-500/20">
+                             <div className="text-sm text-slate-400">AWS Service Used</div>
+                             <Badge variant="outline" className="mt-1">
+                               {displayData.metadata.aws_service.toUpperCase()}
+                             </Badge>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                   )}
+
                    {/* Metadata */}
-                  {result.metadata && (
+                   {displayData.metadata && (
                     <div>
                       <h4 className="font-semibold mb-3 text-white">Document Metadata</h4>
                       <div className="grid grid-cols-2 gap-3">
-                        {Object.entries(result.metadata).map(([key, value]) => (
+                         {Object.entries(displayData.metadata).map(([key, value]) => (
                           <div key={key} className="bg-muted/30 p-3 rounded-lg">
                             <div className="text-sm text-slate-400 capitalize">{key.replace('_', ' ')}</div>
                             <div className="text-white font-medium">{String(value)}</div>

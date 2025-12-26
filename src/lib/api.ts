@@ -110,6 +110,25 @@ class ApiClient {
     this.clearToken();
   }
 
+  // Direct API call method for custom endpoints
+  async makeRequest(method: 'get' | 'post' | 'put' | 'delete', url: string, data?: any) {
+    const config: any = {};
+    if (data && (method === 'post' || method === 'put')) {
+      config.data = data;
+    }
+
+    switch (method) {
+      case 'get':
+        return this.client.get(url, config);
+      case 'post':
+        return this.client.post(url, data, config);
+      case 'put':
+        return this.client.put(url, data, config);
+      case 'delete':
+        return this.client.delete(url, config);
+    }
+  }
+
   // Chat API
   async createConversation(title?: string) {
     return this.client.post('/chat/conversations', { title });
