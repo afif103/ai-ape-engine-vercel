@@ -19,7 +19,8 @@ import {
   FileImage,
   File,
   CheckCircle,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import InstructionPanel from '@/components/InstructionPanel';
 import { apiClient } from '@/lib/api';
@@ -185,26 +186,40 @@ export default function ExtractionPage() {
   };
 
   const exportData = async (format: 'csv' | 'json' | 'excel' | 'xml' | 'html') => {
-    if (!result) return;
+    if (!result) {
+      console.log('Export failed: No result data available');
+      return;
+    }
+
+    console.log(`Starting export for format: ${format}`);
 
     try {
-      // Use edited data if available, otherwise use original result
-      const dataToExport = editedData || result;
+      // Use transformed data if available, otherwise edited data, otherwise original result
+      const dataToExport = transformedData || editedData || result;
+      console.log('Data to export:', dataToExport);
 
       // Call the export API
-      await apiClient.exportData(dataToExport, format);
-    } catch (error) {
+      console.log(`Calling apiClient.exportData for ${format}`);
+      const response = await apiClient.exportData(dataToExport, format);
+      console.log(`Export successful for ${format}:`, response);
+
+    } catch (error: any) {
       console.error(`Export failed for format ${format}:`, error);
+      console.error('Error details:', error.response?.data, error.response?.status, error.message);
+
       // Fallback to client-side export for JSON if API fails
       if (format === 'json') {
-        const dataToExport = editedData || result;
+        console.log('Using JSON fallback');
+        const dataToExport = transformedData || editedData || result;
         const content = JSON.stringify(dataToExport, null, 2);
         const dataUri = `data:application/json;charset=utf-8,${encodeURIComponent(content)}`;
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', `extraction_${Date.now()}.json`);
         linkElement.click();
+        console.log('JSON fallback download triggered');
       }
+      // CSV and Excel have client-side fallbacks in apiClient.exportData
     }
   };
 
@@ -378,17 +393,34 @@ export default function ExtractionPage() {
                 Extraction Results
               </CardTitle>
                {result && (
-                 <div className="flex items-center space-x-2">
-                   <Badge variant="glow">
-                     AI Processing
-                   </Badge>
-                   <Button
-                     variant="ghost"
-                     size="sm"
-                     onClick={() => copyToClipboard(JSON.stringify(editedData || result, null, 2))}
-                     className="hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
-                     title="Copy results to clipboard"
-                   >
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="glow">
+                      AI Processing
+                    </Badge>
+                    {transformedData && (
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary" className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          AI Transformed
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setTransformedData(null)}
+                          className="hover:bg-red-500/20 hover:text-red-400 transition-colors text-xs px-2 h-6"
+                          title="Reset to original data"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => copyToClipboard(JSON.stringify(displayData, null, 2))}
+                      className="hover:bg-blue-500/20 hover:text-blue-400 transition-colors"
+                      title="Copy results to clipboard"
+                    >
                      <Copy className="h-4 w-4" />
                    </Button>
                    <div className="flex items-center space-x-1">
@@ -402,25 +434,25 @@ export default function ExtractionPage() {
                      >
                        JSON
                      </Button>
-                     <Button
-                       variant="ghost"
-                       size="sm"
-                       onClick={() => exportData('csv')}
-                       className="hover:bg-orange-500/20 hover:text-orange-400 transition-colors text-xs px-2"
-                       title="Download as CSV"
-                       disabled={!result.tables || result.tables.length === 0}
-                     >
-                       CSV
-                     </Button>
-                     <Button
-                       variant="ghost"
-                       size="sm"
-                       onClick={() => exportData('excel')}
-                       className="hover:bg-blue-500/20 hover:text-blue-400 transition-colors text-xs px-2"
-                       title="Download as Excel"
-                       disabled={!result.tables || result.tables.length === 0}
-                     >
-                       Excel
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => exportData('csv')}
+                        className="hover:bg-orange-500/20 hover:text-orange-400 transition-colors text-xs px-2"
+                        title="Download as CSV"
+                        disabled={!result}
+                      >
+                        CSV
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => exportData('excel')}
+                        className="hover:bg-blue-500/20 hover:text-blue-400 transition-colors text-xs px-2"
+                        title="Download as Excel"
+                        disabled={!result}
+                      >
+                        Excel
                      </Button>
                    </div>
                  </div>

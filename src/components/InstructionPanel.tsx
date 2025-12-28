@@ -28,49 +28,42 @@ export default function InstructionPanel({ extractedData, onDataTransform }: Ins
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string>('');
 
-  const handleProcessInstruction = async () => {
+  const handleProcessInstruction = async (isPreview: boolean = false) => {
     if (!instruction.trim() || !extractedData) return;
 
-    setIsProcessing(true);
+    if (isPreview) {
+      setIsPreviewing(true);
+    } else {
+      setIsProcessing(true);
+    }
     setError('');
 
     try {
       const response = await apiClient.makeRequest('post', '/instruction/process', {
         instruction: instruction.trim(),
-        extracted_data: extractedData
+        data: extractedData
       });
 
       setResult(response.data);
-      onDataTransform(response.data.transformed_data);
+
+      // Only apply transformation if not in preview mode
+      if (!isPreview) {
+        onDataTransform(response.data.transformed_data);
+      }
     } catch (error: any) {
       console.error('Instruction processing failed:', error);
       setError(error.response?.data?.detail || 'Failed to process instruction');
     } finally {
-      setIsProcessing(false);
+      if (isPreview) {
+        setIsPreviewing(false);
+      } else {
+        setIsProcessing(false);
+      }
     }
   };
 
-  const handlePreviewInstruction = async () => {
-    if (!instruction.trim() || !extractedData) return;
-
-    setIsPreviewing(true);
-    setError('');
-
-    try {
-      const response = await apiClient.makeRequest('post', '/instruction/preview', {
-        instruction: instruction.trim(),
-        extracted_data: extractedData
-      });
-
-      setResult(response.data);
-      // Don't apply transformation in preview mode
-    } catch (error: any) {
-      console.error('Instruction preview failed:', error);
-      setError(error.response?.data?.detail || 'Failed to preview instruction');
-    } finally {
-      setIsPreviewing(false);
-    }
-  };
+  const handlePreviewInstruction = () => handleProcessInstruction(true);
+  const handleApplyInstruction = () => handleProcessInstruction(false);
 
   const getExamples = async () => {
     try {
@@ -126,7 +119,7 @@ export default function InstructionPanel({ extractedData, onDataTransform }: Ins
         )}
 
         <div className="flex gap-2">
-          <Button
+           <Button
             onClick={handlePreviewInstruction}
             disabled={!instruction.trim() || !extractedData || isProcessing || isPreviewing}
             variant="outline"
@@ -146,7 +139,7 @@ export default function InstructionPanel({ extractedData, onDataTransform }: Ins
           </Button>
 
           <Button
-            onClick={handleProcessInstruction}
+            onClick={handleApplyInstruction}
             disabled={!instruction.trim() || !extractedData || isProcessing || isPreviewing}
             className="flex-1"
             variant="futuristic"
@@ -170,40 +163,51 @@ export default function InstructionPanel({ extractedData, onDataTransform }: Ins
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-white">Transformation Result</h4>
               <div className="flex items-center gap-2">
-                {result.success ? (
-                  <Badge variant="glow" className="text-green-400">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Success
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive">
-                    <XCircle className="h-3 w-3 mr-1" />
-                    Failed
-                  </Badge>
-                )}
-                <Badge variant="outline" className="text-xs">
-                  {result.confidence * 100}% confidence
+                <Badge variant="glow" className="text-green-400">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Preview Ready
                 </Badge>
               </div>
             </div>
-
-            {result.transformation_rules && result.transformation_rules.length > 0 && (
-              <div className="bg-slate-800/30 rounded-lg p-3">
-                <h5 className="text-sm font-medium text-slate-300 mb-2">Applied Transformations:</h5>
-                <div className="space-y-1">
-                  {result.transformation_rules.map((rule: any, index: number) => (
-                    <div key={index} className="text-xs text-slate-400">
-                      <span className="font-medium text-blue-400">{rule.operation}:</span> {rule.description}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {result.explanation && (
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
                 <h5 className="text-sm font-medium text-blue-300 mb-1">AI Explanation:</h5>
                 <p className="text-xs text-slate-300">{result.explanation}</p>
+              </div>
+            )}
+
+            {result.transformed_data && (
+              <div className="bg-slate-800/30 rounded-lg p-3">
+                <h5 className="text-sm font-medium text-slate-300 mb-2">Transformed Data Preview:</h5>
+                <div className="text-xs text-slate-400 space-y-1">
+                  {result.transformed_data.filter_applied && (
+                    <div className="text-green-400 font-medium mb-2">
+                      ✅ Content filtered successfully
+                      {result.transformed_data.original_lines && result.transformed_data.filtered_lines && (
+                        <span className="ml-2">
+                          ({result.transformed_data.filtered_lines}/{result.transformed_data.original_lines} lines kept)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {result.transformed_data.text && (
+                    <div>
+                      <span className="font-medium text-green-400">Filtered Text:</span>
+                      <div className="mt-1 p-2 bg-slate-900/50 rounded text-xs font-mono whitespace-pre-line max-h-32 overflow-y-auto">
+                        {result.transformed_data.text}
+                      </div>
+                    </div>
+                  )}
+                  {result.transformed_data.tables && result.transformed_data.tables.length > 0 && (
+                    <div>
+                      <span className="font-medium text-blue-400">Extracted Data:</span> {result.transformed_data.tables.length} table(s) created
+                      {result.transformed_data.tables[0].rows && (
+                        <span className="ml-2">({result.transformed_data.tables[0].rows.length} rows)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

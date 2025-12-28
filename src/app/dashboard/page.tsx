@@ -7,6 +7,7 @@ import { useAuthStore } from '@/contexts/auth-context';
 import { useChatStore } from '@/contexts/chat-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CardSkeleton } from '@/components/ui/skeleton';
 import {
   MessageSquare,
   Code,
@@ -23,7 +24,8 @@ import {
   Target,
   BarChart3,
   Bot,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -31,10 +33,15 @@ export default function Dashboard() {
   const { conversations } = useChatStore();
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [isPageLoading, setIsPageLoading] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/');
+    } else {
+      // Simulate loading for smooth transition
+      const timer = setTimeout(() => setIsPageLoading(false), 800);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, router]);
 
@@ -55,7 +62,7 @@ export default function Dashboard() {
       icon: MessageSquare,
       href: '/chat',
       gradient: 'from-blue-500 to-cyan-500',
-      stats: `${conversations.length} conversations`
+      stats: 'Real-time AI responses'
     },
     {
       title: 'Code Assistant',
@@ -80,6 +87,14 @@ export default function Dashboard() {
       href: '/extraction',
       gradient: 'from-orange-500 to-red-500',
       stats: 'Intelligent parsing'
+    },
+    {
+      title: 'Batch Processing',
+      description: 'Process multiple files simultaneously',
+      icon: Zap,
+      href: '/batch',
+      gradient: 'from-yellow-500 to-orange-500',
+      stats: 'Up to 10 files at once'
     }
   ];
 
@@ -121,7 +136,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
+    <div className={`min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden transition-all duration-500 ${isPageLoading ? 'opacity-0' : 'opacity-100'}`}>
       {/* Liquid Glass Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 opacity-20">

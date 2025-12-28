@@ -223,31 +223,129 @@ class ApiClient {
 
   // Export API
   async exportData(data: any, format: 'csv' | 'json' | 'excel' | 'xml' | 'html') {
-    const response = await this.client.post(`/export/${format}`, data, {
-      responseType: 'blob', // Important for file downloads
-    });
+    console.log(`apiClient.exportData called for ${format}`, data);
 
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
+    try {
+      // For blob responses, we need to manually add the Authorization header
+      const token = this.getToken();
+      console.log(`Token available: ${!!token}`);
 
-    // Set filename based on format
-    const extensions = {
-      csv: 'csv',
-      json: 'json',
-      excel: 'xlsx',
-      xml: 'xml',
-      html: 'html'
-    };
+      const config: any = {
+        responseType: 'blob',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      };
 
-    link.setAttribute('download', `export.${extensions[format]}`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+        console.log('Authorization header added');
+      }
 
-    return response;
+      console.log(`Making POST request to /export/${format}`);
+      const response = await this.client.post(`/export/${format}`, data, config);
+      console.log(`Response received:`, response);
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Set filename based on format
+      const extensions = {
+        csv: 'csv',
+        json: 'json',
+        excel: 'xlsx',
+        xml: 'xml',
+        html: 'html'
+      };
+
+      const timestamp = Date.now();
+      const filename = `extraction_${timestamp}.${extensions[format]}`;
+      link.setAttribute('download', filename);
+      console.log(`Creating download link for ${filename}`);
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      console.log(`Download triggered for ${filename}`);
+      return response;
+    } catch (error: any) {
+      console.error(`Export failed for ${format}:`, error);
+      console.error('Error details:', error.response?.data, error.response?.status, error.message);
+
+      // For CSV and Excel, provide client-side fallback
+      if (format === 'csv' || format === 'excel') {
+        console.log(`Attempting client-side fallback for ${format}`);
+        this._clientSideExport(data, format);
+        return { fallback: true };
+      }
+      throw error;
+    }
+  }
+
+  private _clientSideExport(data: any, format: 'csv' | 'excel') {
+    try {
+      if (!data.tables || data.tables.length === 0) {
+        alert('No tabular data available for export');
+        return;
+      }
+
+      const table = data.tables[0];
+      const timestamp = Date.now();
+
+      if (format === 'csv') {
+        // Create CSV content
+        const headers = table.columns.join(',');
+        const rows = table.rows.map((row: any) =>
+          table.columns.map((col: string) => `"${row[col] || ''}"`).join(',')
+        );
+        const csvContent = [headers, ...rows].join('\n');
+
+        const dataUri = `data:text/csv;charset=utf-8,${encodeURIComponent(csvContent)}`;
+        const link = document.createElement('a');
+        link.setAttribute('href', dataUri);
+        link.setAttribute('download', `extraction_${timestamp}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(dataUri);
+      } else if (format === 'excel') {
+        // For Excel, we'll create a simple HTML table that can be opened in Excel
+        let htmlContent = '<table>';
+        // Add headers
+        htmlContent += '<tr>';
+        table.columns.forEach((col: string) => {
+          htmlContent += `<th>${col}</th>`;
+        });
+        htmlContent += '</tr>';
+
+        // Add rows
+        table.rows.forEach((row: any) => {
+          htmlContent += '<tr>';
+          table.columns.forEach((col: string) => {
+            const value = row[col] || '';
+            htmlContent += `<td>${value}</td>`;
+          });
+          htmlContent += '</tr>';
+        });
+        htmlContent += '</table>';
+
+        const dataUri = `data:application/vnd.ms-excel;charset=utf-8,${encodeURIComponent(htmlContent)}`;
+        const link = document.createElement('a');
+        link.setAttribute('href', dataUri);
+        link.setAttribute('download', `extraction_${timestamp}.xls`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(dataUri);
+      }
+    } catch (error) {
+      console.error('Client-side export failed:', error);
+      alert('Export failed. Please try again.');
+    }
   }
 }
 
