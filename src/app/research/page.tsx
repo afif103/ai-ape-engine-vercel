@@ -20,7 +20,8 @@ import {
   Plus,
   X,
   Upload,
-  FileText
+  FileText,
+  AlertCircle
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -31,8 +32,8 @@ const scrapeSchema = z.object({
 
 const researchSchema = z.object({
   query: z.string().min(10, 'Query must be at least 10 characters'),
-  urls: z.array(z.string().url()).min(1, 'At least one URL is required').max(5, 'Maximum 5 URLs allowed'),
-  maxSources: z.number().min(1).max(5),
+  urls: z.array(z.string().url()).max(10, 'Maximum 10 URLs allowed').optional(),
+  maxSources: z.number().min(1).max(10),
 });
 
 type ScrapeForm = z.infer<typeof scrapeSchema>;
@@ -110,16 +111,39 @@ export default function ResearchPage() {
     setIsLoading(true);
     setResearchResult(null);
     try {
+      // Filter out empty URLs and validate them
+      const validUrls = data.urls?.filter(url => url.trim()).map(url => url.trim()) || [];
+
       // If we have uploaded file content, include it in the query
       let enhancedQuery = data.query;
-      if (fileContent) {
+      let researchMethod = 'query_only';
+
+      if (fileContent && validUrls.length > 0) {
         enhancedQuery = `${data.query}\n\nDocument Content:\n${fileContent}`;
+        researchMethod = 'documents_and_urls';
+      } else if (fileContent) {
+        enhancedQuery = `${data.query}\n\nDocument Content:\n${fileContent}`;
+        researchMethod = 'documents_only';
+      } else if (validUrls.length > 0) {
+        researchMethod = 'urls_only';
       }
 
-      const response = await apiClient.researchTopic(enhancedQuery, data.urls, data.maxSources);
-      setResearchResult(response.data);
-    } catch (error) {
+      const response = await apiClient.researchTopic(enhancedQuery, validUrls, data.maxSources);
+
+      // Add method info to response
+      setResearchResult({
+        ...response.data,
+        method: researchMethod,
+        urls_used: validUrls.length,
+        documents_used: fileContent ? 1 : 0
+      });
+    } catch (error: any) {
       console.error('Research failed:', error);
+      // Show user-friendly error message
+      setResearchResult({
+        error: error.response?.data?.detail || 'Research failed. Please check your inputs and try again.',
+        success: false
+      });
     } finally {
       setIsLoading(false);
     }
@@ -195,22 +219,30 @@ export default function ResearchPage() {
                 <BookOpen className="h-5 w-5 mr-2 text-primary" />
                 {activeTab === 'scrape' ? 'Scraped Content' : 'Research Results'}
               </CardTitle>
-              {(scrapeResult || researchResult) && (
-                <div className="flex items-center space-x-2">
-                  <Badge variant="glow">
-                    {scrapeResult?.provider || researchResult?.provider} • {scrapeResult?.model || researchResult?.model}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyToClipboard(
-                      scrapeResult?.content || researchResult?.synthesis || ''
-                    )}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+               {(scrapeResult || researchResult) && (
+                 <div className="flex items-center space-x-2">
+                   <Badge variant="glow">
+                     {scrapeResult?.provider || researchResult?.provider} • {scrapeResult?.model || researchResult?.model}
+                   </Badge>
+                   {researchResult?.method && (
+                     <Badge variant="secondary">
+                       {researchResult.method === 'query_only' && 'Query Only'}
+                       {researchResult.method === 'urls_only' && `${researchResult.urls_used} URLs`}
+                       {researchResult.method === 'documents_only' && 'Document Analysis'}
+                       {researchResult.method === 'documents_and_urls' && `Doc + ${researchResult.urls_used} URLs`}
+                     </Badge>
+                   )}
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     onClick={() => copyToClipboard(
+                       scrapeResult?.content || researchResult?.synthesis || ''
+                     )}
+                   >
+                     <Copy className="h-4 w-4" />
+                   </Button>
+                 </div>
+               )}
             </div>
           </CardHeader>
 
@@ -281,15 +313,31 @@ export default function ResearchPage() {
                 </div>
               )}
 
-              {/* Research Results */}
-              {researchResult && activeTab === 'research' && (
-                <div className="space-y-6 animate-fade-in">
-                  <div>
-                    <h4 className="font-semibold mb-2 text-white">Research Query</h4>
-                    <p className="text-slate-300 bg-muted/30 p-3 rounded-lg">
-                      {researchResult.query}
-                    </p>
-                  </div>
+               {/* Research Error */}
+               {researchResult?.error && activeTab === 'research' && (
+                 <div className="flex items-center justify-center h-full">
+                   <div className="text-center max-w-md">
+                      <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertCircle className="h-8 w-8 text-red-400" />
+                      </div>
+                     <h3 className="text-lg font-semibold mb-2 text-white">Research Failed</h3>
+                     <p className="text-slate-300 mb-4">{researchResult.error}</p>
+                     <p className="text-sm text-slate-400">
+                       Try adjusting your query or check your inputs.
+                     </p>
+                   </div>
+                 </div>
+               )}
+
+               {/* Research Results */}
+               {researchResult && !researchResult.error && activeTab === 'research' && (
+                 <div className="space-y-6 animate-fade-in">
+                   <div>
+                     <h4 className="font-semibold mb-2 text-white">Research Query</h4>
+                     <p className="text-slate-300 bg-muted/30 p-3 rounded-lg">
+                       {researchResult.query}
+                     </p>
+                   </div>
 
                   <div>
                     <h4 className="font-semibold mb-2 text-white">AI Synthesis</h4>
