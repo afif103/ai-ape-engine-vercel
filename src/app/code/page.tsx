@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/contexts/auth-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,45 +11,43 @@ import Editor from '@monaco-editor/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Code,
-  Play,
   FileText,
   Lightbulb,
   Wrench,
   Zap,
   Copy,
-  Download,
-  Settings
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
-// Form schemas
 const generateSchema = z.object({
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  language: z.string().min(1, 'Language is required'),
+  description: z.string().min(10, 'Description required (10+ chars)'),
+  language: z.string().min(1, 'Language required'),
   context: z.string().optional(),
 });
 
 const reviewSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
-  language: z.string().min(1, 'Language is required'),
+  code: z.string().min(1, 'Code required'),
+  language: z.string().min(1, 'Language required'),
   focus: z.string().optional(),
 });
 
 const explainSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
-  language: z.string().min(1, 'Language is required'),
+  code: z.string().min(1, 'Code required'),
+  language: z.string().min(1, 'Language required'),
   level: z.enum(['beginner', 'intermediate', 'advanced']),
 });
 
 const fixSchema = z.object({
-  code: z.string().min(1, 'Code is required'),
-  error: z.string().min(1, 'Error message is required'),
-  language: z.string().min(1, 'Language is required'),
+  code: z.string().min(1, 'Code required'),
+  error: z.string().min(1, 'Error message required'),
+  language: z.string().min(1, 'Language required'),
 });
 
 type GenerateForm = z.infer<typeof generateSchema>;
@@ -55,24 +56,55 @@ type ExplainForm = z.infer<typeof explainSchema>;
 type FixForm = z.infer<typeof fixSchema>;
 
 export default function CodePage() {
-  const [activeTab, setActiveTab] = useState<'generate' | 'review' | 'explain' | 'fix'>('generate');
+  const { isAuthenticated, user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+
+  const [activeMode, setActiveMode] = useState<'generate' | 'review' | 'explain' | 'fix'>('generate');
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [code, setCode] = useState('');
 
-  const tabs = [
-    { id: 'generate', label: 'Generate', icon: Zap, description: 'Create code from descriptions' },
-    { id: 'review', label: 'Review', icon: FileText, description: 'Analyze code quality' },
-    { id: 'explain', label: 'Explain', icon: Lightbulb, description: 'Understand code logic' },
-    { id: 'fix', label: 'Fix', icon: Wrench, description: 'Debug and correct errors' },
+  const modes = [
+    { id: 'generate', label: 'Generate', description: 'Create from description', icon: Zap },
+    { id: 'review', label: 'Review', description: 'Analyze code quality', icon: FileText },
+    { id: 'explain', label: 'Explain', description: 'Understand logic', icon: Lightbulb },
+    { id: 'fix', label: 'Fix', description: 'Debug & correct', icon: Wrench },
   ];
+
+  const { register: registerGenerate, handleSubmit: handleSubmitGenerate, formState: { errors: errorsGenerate } } = useForm<GenerateForm>({
+    resolver: zodResolver(generateSchema),
+  });
+
+  const { register: registerReview, handleSubmit: handleSubmitReview, formState: { errors: errorsReview }, setValue: setValueReview } = useForm<ReviewForm>({
+    resolver: zodResolver(reviewSchema),
+  });
+
+  const { register: registerExplain, handleSubmit: handleSubmitExplain, formState: { errors: errorsExplain }, setValue: setValueExplain } = useForm<ExplainForm>({
+    resolver: zodResolver(explainSchema),
+  });
+
+  const { register: registerFix, handleSubmit: handleSubmitFix, formState: { errors: errorsFix }, setValue: setValueFix } = useForm<FixForm>({
+    resolver: zodResolver(fixSchema),
+  });
 
   const handleGenerate = async (data: GenerateForm) => {
     setIsLoading(true);
+    setResult(null);
     try {
       const response = await apiClient.generateCode(data.description, data.language, data.context);
       setResult({ type: 'generate', ...response.data });
     } catch (error) {
-      console.error('Generation failed:', error);
+      console.error('Generate failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -80,6 +112,7 @@ export default function CodePage() {
 
   const handleReview = async (data: ReviewForm) => {
     setIsLoading(true);
+    setResult(null);
     try {
       const response = await apiClient.reviewCode(data.code, data.language, data.focus);
       setResult({ type: 'review', ...response.data });
@@ -92,11 +125,12 @@ export default function CodePage() {
 
   const handleExplain = async (data: ExplainForm) => {
     setIsLoading(true);
+    setResult(null);
     try {
       const response = await apiClient.explainCode(data.code, data.language, data.level);
       setResult({ type: 'explain', ...response.data });
     } catch (error) {
-      console.error('Explanation failed:', error);
+      console.error('Explain failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +138,7 @@ export default function CodePage() {
 
   const handleFix = async (data: FixForm) => {
     setIsLoading(true);
+    setResult(null);
     try {
       const response = await apiClient.fixCode(data.code, data.error, data.language);
       setResult({ type: 'fix', ...response.data });
@@ -114,405 +149,537 @@ export default function CodePage() {
     }
   };
 
+  const handleCodeChange = (value: string | undefined) => {
+    const codeValue = value || '';
+    setCode(codeValue);
+    if (activeMode === 'review') setValueReview('code', codeValue);
+    if (activeMode === 'explain') setValueExplain('code', codeValue);
+    if (activeMode === 'fix') setValueFix('code', codeValue);
+  };
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
   };
 
   return (
     <div className="flex h-full gap-4 p-4">
-      {/* Left Panel - Controls */}
-      <div className="w-80 space-y-4">
-        {/* Tab Selection */}
-        <Card className="liquid-glass">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <Code className="h-5 w-5 mr-2 text-primary" />
-              Code Assistant
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {tabs.map((tab) => (
+      {/* CONTROL PANEL */}
+      <div className="w-80 space-y-4 flex-shrink-0">
+        {/* Tool Header */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+            Back
+          </Link>
+          <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
+            <Code className="h-5 w-5 text-blue-400" />
+            Code Assistant
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">Generate, review & debug code</p>
+        </Card>
+
+        {/* Mode Switcher */}
+        <Card className="liquid-glass bg-slate-900/80 p-3">
+          <div className="space-y-2">
+            {modes.map(mode => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`w-full p-3 rounded-lg border transition-all duration-300 text-left ${
-                  activeTab === tab.id
-                    ? 'bg-primary/20 border-primary/50 glow'
-                    : 'bg-card/50 border-border/50 glass hover:bg-accent/50'
+                key={mode.id}
+                onClick={() => setActiveMode(mode.id as any)}
+                className={`w-full p-2 rounded-lg border text-left transition-all ${
+                  activeMode === mode.id
+                    ? 'bg-purple-500/20 border-purple-500/50'
+                    : 'border-slate-700/50 hover:scale-[1.02]'
                 }`}
               >
-                <div className="flex items-center">
-                  <tab.icon className={`h-5 w-5 mr-3 ${
-                    activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'
-                  }`} />
-                  <div>
-                    <div className="font-medium">{tab.label}</div>
-                    <div className="text-xs text-muted-foreground">{tab.description}</div>
+                <div className="flex items-center gap-2">
+                  <mode.icon className={`h-4 w-4 ${activeMode === mode.id ? 'text-purple-400' : 'text-slate-400'}`} />
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-white">{mode.label}</div>
+                    <div className="text-xs text-slate-400">{mode.description}</div>
                   </div>
                 </div>
               </button>
             ))}
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Action Form */}
-        <Card className="liquid-glass">
-          <CardContent className="p-4">
-            {activeTab === 'generate' && <GenerateForm onSubmit={handleGenerate} isLoading={isLoading} />}
-            {activeTab === 'review' && <ReviewForm onSubmit={handleReview} isLoading={isLoading} />}
-            {activeTab === 'explain' && <ExplainForm onSubmit={handleExplain} isLoading={isLoading} />}
-            {activeTab === 'fix' && <FixForm onSubmit={handleFix} isLoading={isLoading} />}
-          </CardContent>
+        {/* Input Form */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <div className="space-y-3">
+            {activeMode === 'generate' && (
+              <>
+                <div>
+                  <Label className="text-sm text-slate-300">Description</Label>
+                  <Textarea
+                    {...registerGenerate('description')}
+                    className="mt-1.5 min-h-[100px] glass text-white text-sm"
+                    placeholder="Describe what you want..."
+                  />
+                  {errorsGenerate.description && (
+                    <p className="text-xs text-red-400 mt-1">{errorsGenerate.description.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Language</Label>
+                  <Input
+                    {...registerGenerate('language')}
+                    className="mt-1.5 h-9 glass text-white"
+                    placeholder="python"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Context (Optional)</Label>
+                  <Textarea
+                    {...registerGenerate('context')}
+                    className="mt-1.5 min-h-[60px] glass text-white text-sm"
+                    placeholder="Additional context..."
+                  />
+                </div>
+                <Button
+                  onClick={handleSubmitGenerate(handleGenerate)}
+                  className="w-full h-9"
+                  variant="futuristic"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4 mr-2" />
+                      Generate Code
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {activeMode === 'review' && (
+              <>
+                <div>
+                  <Label className="text-sm text-slate-300">Code to Review</Label>
+                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                    <Editor
+                      height="200px"
+                      language="python"
+                      value={code}
+                      onChange={handleCodeChange}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                      }}
+                    />
+                  </div>
+                  {errorsReview.code && (
+                    <p className="text-xs text-red-400 mt-1">{errorsReview.code.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Language</Label>
+                  <Input
+                    {...registerReview('language')}
+                    className="mt-1.5 h-9 glass text-white"
+                    placeholder="python"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Focus (Optional)</Label>
+                  <Input
+                    {...registerReview('focus')}
+                    className="mt-1.5 h-9 glass text-white"
+                    placeholder="security, performance..."
+                  />
+                </div>
+                <Button
+                  onClick={handleSubmitReview(handleReview)}
+                  className="w-full h-9"
+                  variant="futuristic"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Reviewing...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Review Code
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {activeMode === 'explain' && (
+              <>
+                <div>
+                  <Label className="text-sm text-slate-300">Code to Explain</Label>
+                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                    <Editor
+                      height="200px"
+                      language="python"
+                      value={code}
+                      onChange={handleCodeChange}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                      }}
+                    />
+                  </div>
+                  {errorsExplain.code && (
+                    <p className="text-xs text-red-400 mt-1">{errorsExplain.code.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Language</Label>
+                  <Input
+                    {...registerExplain('language')}
+                    className="mt-1.5 h-9 glass text-white"
+                    placeholder="python"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Level</Label>
+                  <select
+                    {...registerExplain('level')}
+                    className="mt-1.5 w-full h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-white glass"
+                  >
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+                <Button
+                  onClick={handleSubmitExplain(handleExplain)}
+                  className="w-full h-9"
+                  variant="futuristic"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Explaining...
+                    </>
+                  ) : (
+                    <>
+                      <Lightbulb className="h-4 w-4 mr-2" />
+                      Explain Code
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {activeMode === 'fix' && (
+              <>
+                <div>
+                  <Label className="text-sm text-slate-300">Code with Error</Label>
+                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                    <Editor
+                      height="180px"
+                      language="python"
+                      value={code}
+                      onChange={handleCodeChange}
+                      theme="vs-dark"
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 13,
+                        lineNumbers: 'on',
+                        scrollBeyondLastLine: false,
+                      }}
+                    />
+                  </div>
+                  {errorsFix.code && (
+                    <p className="text-xs text-red-400 mt-1">{errorsFix.code.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Error Message</Label>
+                  <Textarea
+                    {...registerFix('error')}
+                    className="mt-1.5 min-h-[70px] glass text-white text-sm font-mono"
+                    placeholder="Paste error here..."
+                  />
+                  {errorsFix.error && (
+                    <p className="text-xs text-red-400 mt-1">{errorsFix.error.message}</p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-300">Language</Label>
+                  <Input
+                    {...registerFix('language')}
+                    className="mt-1.5 h-9 glass text-white"
+                    placeholder="python"
+                  />
+                </div>
+                <Button
+                  onClick={handleSubmitFix(handleFix)}
+                  className="w-full h-9"
+                  variant="futuristic"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Fixing...
+                    </>
+                  ) : (
+                    <>
+                      <Wrench className="h-4 w-4 mr-2" />
+                      Fix Code
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
+        </Card>
+
+        {/* Context */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <h3 className="text-sm font-medium text-white mb-3">Features</h3>
+          <div className="space-y-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <Zap className="h-3.5 w-3.5 text-blue-400" />
+              <span>Multi-language support</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Code className="h-3.5 w-3.5 text-purple-400" />
+              <span>Syntax highlighting</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Lightbulb className="h-3.5 w-3.5 text-yellow-400" />
+              <span>Context-aware AI</span>
+            </div>
+          </div>
         </Card>
       </div>
 
-      {/* Right Panel - Results */}
-      <div className="flex-1">
-        <Card className="h-full liquid-glass flex flex-col">
-          <CardHeader className="border-b border-border/50">
+      {/* WORK AREA */}
+      <div className="flex-1 min-w-0">
+        <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Play className="h-5 w-5 mr-2 text-primary" />
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <Code className="h-5 w-5 text-blue-400" />
                 AI Response
-              </CardTitle>
+              </h2>
               {result && (
-                <div className="flex items-center space-x-2">
-                  <Badge variant="glow">
+                <div className="flex items-center gap-2">
+                  <Badge variant="glow" className="text-xs px-2 py-0.5">
                     {result.provider} • {result.model}
                   </Badge>
                   <Button
-                    variant="ghost"
                     size="sm"
-                    onClick={() => copyToClipboard(result.content || result.result || result.review || result.explanation)}
+                    variant="ghost"
+                    onClick={() => copyToClipboard(result.content || result.result || result.review || result.explanation || '')}
+                    className="h-7 px-2"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               )}
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent className="flex-1 overflow-hidden p-0">
-            <div className="h-full overflow-y-auto p-4">
-              {!result && !isLoading && (
-                <div className="flex items-center justify-center h-full">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            {!result && !isLoading && (
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
+                <div className="max-w-4xl mx-auto space-y-6">
+                  {/* Header */}
                   <div className="text-center">
-                    <Code className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-                    <h3 className="text-lg font-semibold mb-2 text-white">Ready to Assist</h3>
-                    <p className="text-slate-300">
-                      Select an action and provide your code or description to get AI assistance.
-                    </p>
+                    <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                      <Code className="h-6 w-6 text-purple-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-white mb-1">Ready to Code</h3>
+                    <p className="text-sm text-slate-400">Select a language or task to get started</p>
+                  </div>
+
+                  {/* Current Mode Indicator */}
+                  <div className="flex items-center justify-center gap-2 text-sm">
+                    <span className="text-slate-400">Current Mode:</span>
+                    <Badge variant="glow" className="text-purple-300">
+                      {activeMode === 'generate' && '⚡ Generate'}
+                      {activeMode === 'review' && '📝 Review'}
+                      {activeMode === 'explain' && '💡 Explain'}
+                      {activeMode === 'fix' && '🔧 Fix'}
+                    </Badge>
+                  </div>
+
+                  {/* Popular Languages */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Popular Languages</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { emoji: '🐍', name: 'Python', code: 'python' },
+                        { emoji: '📜', name: 'TypeScript', code: 'typescript' },
+                        { emoji: '⚛️', name: 'React', code: 'javascript' },
+                        { emoji: '🗄️', name: 'SQL', code: 'sql' }
+                      ].map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => {
+                            const langInput = document.querySelector('input[placeholder="python"]') as HTMLInputElement;
+                            if (langInput) langInput.value = lang.code;
+                          }}
+                          className="p-4 bg-slate-800/60 hover:scale-[1.02] border border-slate-700/50 hover:border-purple-500/50 rounded-lg transition-all group"
+                        >
+                          <div className="text-3xl mb-2">{lang.emoji}</div>
+                          <div className="text-sm font-medium text-white group-hover:text-purple-400 transition-colors">
+                            {lang.name}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Common Tasks */}
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Common Tasks</h4>
+                    <div className="space-y-2">
+                      {[
+                        { task: 'Create a REST API endpoint with error handling', mode: 'generate' },
+                        { task: 'Write unit tests for this function', mode: 'generate' },
+                        { task: 'Refactor this code for better performance', mode: 'review' },
+                        { task: 'Add TypeScript types to this JavaScript code', mode: 'generate' }
+                      ].map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            if (activeMode === 'generate') {
+                              const descInput = document.querySelector('textarea[placeholder="Describe what you want..."]') as HTMLTextAreaElement;
+                            if (descInput) descInput.value = item.task;
+                          }
+                        }}
+                          className="w-full p-3 bg-slate-800/60 hover:scale-[1.02] border border-slate-700/50 hover:border-purple-500/50 rounded-lg text-left transition-all group flex items-start gap-3"
+                        >
+                          <div className="text-purple-400 mt-0.5">→</div>
+                          <div className="flex-1 text-sm text-slate-300 group-hover:text-white transition-colors">
+                            {item.task}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Features Info */}
+                  <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-white mb-3">What I Can Help With</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-300">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-purple-400" />
+                        <span>Generate code from descriptions</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-purple-400" />
+                        <span>Review code quality & security</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-purple-400" />
+                        <span>Explain code logic step-by-step</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Wrench className="h-4 w-4 text-purple-400" />
+                        <span>Debug and fix errors</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {isLoading && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <div className="animate-pulse-glow w-8 h-8 bg-primary rounded-full mx-auto mb-4"></div>
-                    <p className="text-slate-300">AI is analyzing your code...</p>
-                  </div>
+            {isLoading && (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 text-purple-400 animate-spin mx-auto mb-3" />
+                  <p className="text-sm text-slate-300">AI is analyzing...</p>
                 </div>
-              )}
+              </div>
+            )}
 
-              {result && (
-                <div className="space-y-4 animate-fade-in">
-                  {result.type === 'generate' && (
-                    <div>
-                      <h4 className="font-semibold mb-2 text-white">Generated Code ({result.language})</h4>
-                      <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+            {result && (
+              <div className="space-y-4 animate-fade-in">
+                {result.type === 'generate' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-white mb-2">Generated Code ({result.language})</h3>
+                    <div className="bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 bg-slate-800/30">
+                        <span className="text-xs text-slate-400">{result.language}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(result.content)}
+                          className="h-6 px-2"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <pre className="p-4 text-xs text-slate-200 overflow-x-auto">
                         <code>{result.content}</code>
                       </pre>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {result.type === 'review' && (
-                    <div>
-                      <h4 className="font-semibold mb-2 text-white">Code Review Results</h4>
-                      <div className="prose prose-sm max-w-none text-slate-200">
-                        <div dangerouslySetInnerHTML={{
-                          __html: result.review.replace(/\n/g, '<br>')
-                        }} />
+                {result.type === 'review' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-white mb-2">Code Review</h3>
+                    <div className="bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                      <div className="prose prose-sm prose-invert max-w-none text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                        {result.review}
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {result.type === 'explain' && (
-                    <div>
-                      <h4 className="font-semibold mb-2 text-white">Code Explanation ({result.level} level)</h4>
-                      <div className="prose prose-sm max-w-none text-slate-200">
-                        <div dangerouslySetInnerHTML={{
-                          __html: result.explanation.replace(/\n/g, '<br>')
-                        }} />
+                {result.type === 'explain' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-white mb-2">Explanation ({result.level})</h3>
+                    <div className="bg-slate-800/30 p-4 rounded-lg border border-slate-700/50">
+                      <div className="prose prose-sm prose-invert max-w-none text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                        {result.explanation}
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                  {result.type === 'fix' && (
-                    <div>
-                      <h4 className="font-semibold mb-2 text-white">Fixed Code ({result.language})</h4>
-                      <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
+                {result.type === 'fix' && (
+                  <div>
+                    <h3 className="text-sm font-medium text-white mb-2">Fixed Code ({result.language})</h3>
+                    <div className="bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 bg-slate-800/30">
+                        <span className="text-xs text-slate-400">{result.language}</span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyToClipboard(result.result)}
+                          className="h-6 px-2"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <pre className="p-4 text-xs text-slate-200 overflow-x-auto">
                         <code>{result.result}</code>
                       </pre>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </div>
-  );
-}
-
-// Form Components
-function GenerateForm({ onSubmit, isLoading }: { onSubmit: (data: GenerateForm) => void; isLoading: boolean }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<GenerateForm>({
-    resolver: zodResolver(generateSchema),
-  });
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <Label htmlFor="description">Description</Label>
-        <Textarea
-          id="description"
-          placeholder="Describe what you want the code to do..."
-          className="min-h-[100px] glass"
-          {...register('description')}
-        />
-        {errors.description && (
-          <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="language">Language</Label>
-        <Input
-          id="language"
-          placeholder="python"
-          className="liquid-glass"
-          {...register('language')}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="context">Additional Context (Optional)</Label>
-        <Textarea
-          id="context"
-          placeholder="Any additional requirements or context..."
-          className="min-h-[60px] glass"
-          {...register('context')}
-        />
-      </div>
-
-      <Button type="submit" className="w-full" disabled={isLoading} variant="futuristic">
-        {isLoading ? 'Generating...' : 'Generate Code'}
-      </Button>
-    </form>
-  );
-}
-
-function ReviewForm({ onSubmit, isLoading }: { onSubmit: (data: ReviewForm) => void; isLoading: boolean }) {
-  const [code, setCode] = useState('');
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ReviewForm>({
-    resolver: zodResolver(reviewSchema),
-  });
-
-  const handleCodeChange = (value: string | undefined) => {
-    const codeValue = value || '';
-    setCode(codeValue);
-    setValue('code', codeValue);
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <Label htmlFor="code">Code to Review</Label>
-        <div className="border border-slate-700/50 rounded-lg overflow-hidden">
-          <Editor
-            height="200px"
-            language="python"
-            value={code}
-            onChange={handleCodeChange}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              roundedSelection: false,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              wordWrap: 'on',
-            }}
-          />
-        </div>
-        {errors.code && (
-          <p className="text-sm text-red-400 mt-1">{errors.code.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="language">Language</Label>
-        <Input
-          id="language"
-          placeholder="python"
-          className="liquid-glass"
-          {...register('language')}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="focus">Focus Area (Optional)</Label>
-        <Input
-          id="focus"
-          placeholder="e.g., security, performance, readability"
-          className="liquid-glass"
-          {...register('focus')}
-        />
-      </div>
-
-      <Button type="submit" className="w-full" disabled={isLoading} variant="futuristic">
-        {isLoading ? 'Reviewing...' : 'Review Code'}
-      </Button>
-    </form>
-  );
-}
-
-function ExplainForm({ onSubmit, isLoading }: { onSubmit: (data: ExplainForm) => void; isLoading: boolean }) {
-  const [code, setCode] = useState('');
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<ExplainForm>({
-    resolver: zodResolver(explainSchema),
-  });
-
-  const handleCodeChange = (value: string | undefined) => {
-    const codeValue = value || '';
-    setCode(codeValue);
-    setValue('code', codeValue);
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <Label htmlFor="code">Code to Explain</Label>
-        <div className="border border-slate-700/50 rounded-lg overflow-hidden">
-          <Editor
-            height="200px"
-            language="python"
-            value={code}
-            onChange={handleCodeChange}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              roundedSelection: false,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              wordWrap: 'on',
-            }}
-          />
-        </div>
-        {errors.code && (
-          <p className="text-sm text-red-400 mt-1">{errors.code.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="language">Language</Label>
-        <Input
-          id="language"
-          placeholder="python"
-          className="liquid-glass"
-          {...register('language')}
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="level">Explanation Level</Label>
-        <select
-          className="w-full p-2 rounded-md border border-input bg-background glass"
-          {...register('level')}
-        >
-          <option value="beginner">Beginner</option>
-          <option value="intermediate">Intermediate</option>
-          <option value="advanced">Advanced</option>
-        </select>
-      </div>
-
-      <Button type="submit" className="w-full" disabled={isLoading} variant="futuristic">
-        {isLoading ? 'Explaining...' : 'Explain Code'}
-      </Button>
-    </form>
-  );
-}
-
-function FixForm({ onSubmit, isLoading }: { onSubmit: (data: FixForm) => void; isLoading: boolean }) {
-  const [code, setCode] = useState('');
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FixForm>({
-    resolver: zodResolver(fixSchema),
-  });
-
-  const handleCodeChange = (value: string | undefined) => {
-    const codeValue = value || '';
-    setCode(codeValue);
-    setValue('code', codeValue);
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <Label htmlFor="code">Code with Error</Label>
-        <div className="border border-slate-700/50 rounded-lg overflow-hidden">
-          <Editor
-            height="200px"
-            language="python"
-            value={code}
-            onChange={handleCodeChange}
-            theme="vs-dark"
-            options={{
-              minimap: { enabled: false },
-              fontSize: 14,
-              lineNumbers: 'on',
-              roundedSelection: false,
-              scrollBeyondLastLine: false,
-              automaticLayout: true,
-              wordWrap: 'on',
-            }}
-          />
-        </div>
-        {errors.code && (
-          <p className="text-sm text-red-400 mt-1">{errors.code.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="error">Error Message</Label>
-        <Textarea
-          id="error"
-          placeholder="Paste the error message here..."
-          className="min-h-[80px] glass font-mono text-sm"
-          {...register('error')}
-        />
-        {errors.error && (
-          <p className="text-sm text-destructive mt-1">{errors.error.message}</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="language">Language</Label>
-        <Input
-          id="language"
-          placeholder="python"
-          className="liquid-glass"
-          {...register('language')}
-        />
-      </div>
-
-      <Button type="submit" className="w-full" disabled={isLoading} variant="futuristic">
-        {isLoading ? 'Fixing...' : 'Fix Code'}
-      </Button>
-    </form>
   );
 }

@@ -65,35 +65,108 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
-      {/* Background Effects */}
+    <div className="min-h-screen bg-slate-950 relative overflow-hidden">
+      {/* Enhanced Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 opacity-[0.02]">
-          <div
-            className="absolute inset-0"
+        {/* Large Moving Grid with Strong Perspective */}
+        <div className="absolute inset-0" style={{ perspective: '800px' }}>
+          <div 
+            className="absolute inset-0 opacity-40"
             style={{
               backgroundImage: `
-                linear-gradient(rgba(102, 126, 234, 0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(102, 126, 234, 0.1) 1px, transparent 1px)
+                linear-gradient(to right, rgba(59, 130, 246, 0.4) 2px, transparent 2px),
+                linear-gradient(to bottom, rgba(59, 130, 246, 0.4) 2px, transparent 2px)
               `,
-              backgroundSize: '60px 60px'
+              backgroundSize: '80px 80px',
+              transform: 'rotateX(60deg) translateZ(-300px) scale(2)',
+              transformOrigin: 'center bottom',
+              animation: 'gridFlow 15s linear infinite'
             }}
           />
         </div>
 
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 opacity-20">
-          <div className="w-full h-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full animate-liquid-morph"></div>
+        {/* Secondary Grid Layer */}
+        <div className="absolute inset-0" style={{ perspective: '800px' }}>
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: `
+                linear-gradient(to right, rgba(168, 85, 247, 0.5) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(168, 85, 247, 0.5) 1px, transparent 1px)
+              `,
+              backgroundSize: '40px 40px',
+              transform: 'rotateX(60deg) translateZ(-150px) scale(1.5)',
+              transformOrigin: 'center bottom',
+              animation: 'gridFlow 10s linear infinite reverse'
+            }}
+          />
         </div>
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 opacity-15">
-          <div className="w-full h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-full animate-liquid-morph" style={{ animationDelay: '2s' }}></div>
+
+        {/* Massive Glowing Orbs */}
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] opacity-40">
+          <div className="w-full h-full bg-gradient-to-br from-blue-500/50 to-purple-500/50 rounded-full blur-[120px] animate-float-massive"></div>
         </div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 opacity-10">
-          <div className="w-full h-full bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full animate-liquid-morph" style={{ animationDelay: '4s' }}></div>
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] opacity-35">
+          <div className="w-full h-full bg-gradient-to-br from-purple-500/50 to-pink-500/50 rounded-full blur-[100px] animate-float-massive-2"></div>
+        </div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] opacity-30">
+          <div className="w-full h-full bg-gradient-to-br from-cyan-500/50 to-blue-500/50 rounded-full blur-[90px] animate-float-massive-3"></div>
+        </div>
+
+        {/* Bright Scanning Lines */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute h-1 w-full bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-scan-vertical-fast blur-sm"></div>
+          <div className="absolute h-full w-1 bg-gradient-to-b from-transparent via-purple-400 to-transparent animate-scan-horizontal-fast blur-sm"></div>
+        </div>
+
+        {/* Additional Scanning Lines */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute h-0.5 w-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-scan-vertical-slow"></div>
+          <div className="absolute h-full w-0.5 bg-gradient-to-b from-transparent via-pink-400 to-transparent animate-scan-horizontal-slow"></div>
+        </div>
+
+        {/* Abundant Moving Particles */}
+        <div className="absolute inset-0">
+          {[...Array(50)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                width: `${2 + Math.random() * 4}px`,
+                height: `${2 + Math.random() * 4}px`,
+                background: `rgba(${59 + Math.random() * 150}, ${130 + Math.random() * 100}, 246, ${0.3 + Math.random() * 0.5})`,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                boxShadow: `0 0 ${4 + Math.random() * 8}px rgba(59, 130, 246, 0.8)`,
+                animation: `floatParticle ${8 + Math.random() * 15}s linear infinite`,
+                animationDelay: `${Math.random() * 5}s`
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Radial Pulse Waves */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+          <div className="absolute w-96 h-96 border-2 border-blue-500/30 rounded-full animate-pulse-wave"></div>
+          <div className="absolute w-96 h-96 border-2 border-purple-500/30 rounded-full animate-pulse-wave-delayed"></div>
+          <div className="absolute w-96 h-96 border-2 border-cyan-500/30 rounded-full animate-pulse-wave-delayed-2"></div>
+        </div>
+
+        {/* Strong Corner Glows */}
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-gradient-to-br from-blue-500/30 via-transparent to-transparent blur-[100px] animate-glow-pulse"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-purple-500/30 via-transparent to-transparent blur-[100px] animate-glow-pulse-delayed"></div>
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-cyan-500/30 via-transparent to-transparent blur-[100px] animate-glow-pulse-delayed-2"></div>
+        <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-pink-500/30 via-transparent to-transparent blur-[100px] animate-glow-pulse"></div>
+
+        {/* Diagonal Light Beams */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-400 via-transparent to-transparent transform rotate-45 origin-top-left animate-beam-1"></div>
+          <div className="absolute top-0 right-0 w-1 h-full bg-gradient-to-b from-purple-400 via-transparent to-transparent transform -rotate-45 origin-top-right animate-beam-2"></div>
         </div>
       </div>
 
       {/* Header */}
-      <header className="relative border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-sm">
+      <header className="relative border-b border-slate-800/50 bg-slate-950/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center animate-float-3d">
@@ -266,6 +339,229 @@ export default function Home() {
           </div>
         </section>
       </main>
+
+      <style jsx global>{`
+        @keyframes gridFlow {
+          0% {
+            transform: rotateX(60deg) translateZ(-300px) scale(2) translateY(0);
+          }
+          100% {
+            transform: rotateX(60deg) translateZ(-300px) scale(2) translateY(80px);
+          }
+        }
+
+        @keyframes scan-vertical-fast {
+          0% { top: -10%; }
+          100% { top: 110%; }
+        }
+
+        @keyframes scan-horizontal-fast {
+          0% { left: -10%; }
+          100% { left: 110%; }
+        }
+
+        @keyframes scan-vertical-slow {
+          0% { top: -10%; }
+          100% { top: 110%; }
+        }
+
+        @keyframes scan-horizontal-slow {
+          0% { left: -10%; }
+          100% { left: 110%; }
+        }
+
+        @keyframes floatParticle {
+          0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translate(100px, -120vh) scale(0.5);
+            opacity: 0;
+          }
+        }
+
+        @keyframes float-massive {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          33% {
+            transform: translate(50px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-30px, 30px) scale(0.9);
+          }
+        }
+
+        @keyframes float-massive-2 {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          33% {
+            transform: translate(-40px, 40px) scale(1.15);
+          }
+          66% {
+            transform: translate(60px, -20px) scale(0.95);
+          }
+        }
+
+        @keyframes float-massive-3 {
+          0%, 100% {
+            transform: translate(-50%, -50%) scale(1);
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.2);
+          }
+        }
+
+        @keyframes pulse-wave {
+          0% {
+            transform: scale(0.5);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(3);
+            opacity: 0;
+          }
+        }
+
+        @keyframes pulse-wave-delayed {
+          0% {
+            transform: scale(0.5);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(3);
+            opacity: 0;
+          }
+        }
+
+        @keyframes pulse-wave-delayed-2 {
+          0% {
+            transform: scale(0.5);
+            opacity: 0.6;
+          }
+          100% {
+            transform: scale(3);
+            opacity: 0;
+          }
+        }
+
+        @keyframes glow-pulse {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        @keyframes glow-pulse-delayed {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        @keyframes glow-pulse-delayed-2 {
+          0%, 100% {
+            opacity: 0.3;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        @keyframes beam-1 {
+          0%, 100% {
+            opacity: 0;
+            transform: translateX(-100%) rotate(45deg);
+          }
+          50% {
+            opacity: 1;
+            transform: translateX(200%) rotate(45deg);
+          }
+        }
+
+        @keyframes beam-2 {
+          0%, 100% {
+            opacity: 0;
+            transform: translateX(100%) rotate(-45deg);
+          }
+          50% {
+            opacity: 1;
+            transform: translateX(-200%) rotate(-45deg);
+          }
+        }
+
+        .animate-scan-vertical-fast {
+          animation: scan-vertical-fast 4s linear infinite;
+        }
+
+        .animate-scan-horizontal-fast {
+          animation: scan-horizontal-fast 5s linear infinite;
+        }
+
+        .animate-scan-vertical-slow {
+          animation: scan-vertical-slow 8s linear infinite;
+        }
+
+        .animate-scan-horizontal-slow {
+          animation: scan-horizontal-slow 10s linear infinite;
+        }
+
+        .animate-float-massive {
+          animation: float-massive 20s ease-in-out infinite;
+        }
+
+        .animate-float-massive-2 {
+          animation: float-massive-2 25s ease-in-out infinite;
+        }
+
+        .animate-float-massive-3 {
+          animation: float-massive-3 15s ease-in-out infinite;
+        }
+
+        .animate-pulse-wave {
+          animation: pulse-wave 4s ease-out infinite;
+        }
+
+        .animate-pulse-wave-delayed {
+          animation: pulse-wave-delayed 4s ease-out infinite 1.3s;
+        }
+
+        .animate-pulse-wave-delayed-2 {
+          animation: pulse-wave-delayed-2 4s ease-out infinite 2.6s;
+        }
+
+        .animate-glow-pulse {
+          animation: glow-pulse 3s ease-in-out infinite;
+        }
+
+        .animate-glow-pulse-delayed {
+          animation: glow-pulse-delayed 3s ease-in-out infinite 1s;
+        }
+
+        .animate-glow-pulse-delayed-2 {
+          animation: glow-pulse-delayed-2 3s ease-in-out infinite 2s;
+        }
+
+        .animate-beam-1 {
+          animation: beam-1 6s linear infinite;
+        }
+
+        .animate-beam-2 {
+          animation: beam-2 8s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
