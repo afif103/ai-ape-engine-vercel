@@ -36,7 +36,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
-      router.push('/chat');
+      router.push('/dashboard');
     } catch (error) {
       // Error is handled by the store
     }
@@ -71,15 +71,15 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">AI Dashboard</h1>
-              <p className="text-sm text-slate-400">Sign in to continue</p>
+              <p className="text-sm text-slate-300">Sign in to continue</p>
             </div>
           </div>
           <h2 className="text-2xl font-bold text-white mb-2">Welcome back</h2>
-          <p className="text-slate-400">Sign in to your account</p>
+          <p className="text-slate-300">Sign in to your account</p>
         </div>
 
         {/* Form */}
-        <Card className="bg-slate-900/50 border-slate-700/50 p-6">
+        <Card className="bg-slate-900/70 border-slate-700/70 p-6 backdrop-blur-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-white">Email</Label>
@@ -136,13 +136,13 @@ export default function LoginPage() {
 
         {/* Links */}
         <div className="text-center space-y-2">
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-300">
             Don't have an account?{' '}
             <Link href="/register" className="text-primary hover:text-cyan-400 transition-colors font-mono">
               INITIALIZE ACCOUNT
             </Link>
           </p>
-          <p className="text-sm text-gray-400">
+          <p className="text-sm text-slate-300">
             <Link href="/" className="hover:text-primary transition-colors font-mono">
               RETURN TO SURFACE
             </Link>
