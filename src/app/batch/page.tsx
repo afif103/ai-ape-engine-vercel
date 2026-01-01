@@ -149,7 +149,8 @@ export default function BatchProcessingPage() {
 
       setFiles(prev => prev.map(f => ({ ...f, status: 'uploading' })));
 
-      const response = await fetch('/api/v1/batch/upload', {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+      const response = await fetch(`${API_URL}/batch/upload`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -175,9 +176,10 @@ export default function BatchProcessingPage() {
   };
 
   const pollBatchStatus = async (batchJobId: string) => {
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     const poll = async () => {
       try {
-        const response = await fetch(`/api/v1/batch/status/${batchJobId}`, {
+        const response = await fetch(`${API_URL}/batch/status/${batchJobId}`, {
           headers: {
             'Authorization': `Bearer ${getToken()}`
           }
