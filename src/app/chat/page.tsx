@@ -1,13 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/contexts/auth-context';
 import { useChatStore } from '@/contexts/chat-context';
+import { Message } from '@/types/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MetricCard } from '@/components/ui/metric-card';
 import { apiClient } from '@/lib/api';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 import {
   MessageSquare,
   Send,
@@ -16,10 +22,16 @@ import {
   Bot,
   User,
   Zap,
-  Activity
+  Search,
+  Copy,
+  Loader2,
+  ArrowLeft
 } from 'lucide-react';
 
 export default function ChatPage() {
+  const { isAuthenticated, user } = useAuthStore();
+  const router = useRouter();
+
   const {
     conversations,
     currentConversation,
@@ -27,18 +39,38 @@ export default function ChatPage() {
     loadConversations,
     createConversation,
     selectConversation,
-    sendMessage,
     deleteConversation,
   } = useChatStore();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const [message, setMessage] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [streamingMessage, setStreamingMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   useEffect(() => {
     loadConversations();
   }, [loadConversations]);
+
+  useEffect(() => {
+    if (currentConversation?.messages) {
+      const container = document.querySelector('[data-messages-container]');
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+  }, [currentConversation?.messages, streamingMessage]);
 
   const handleCreateConversation = async () => {
     try {
@@ -54,75 +86,135 @@ export default function ChatPage() {
     await selectConversation(conversationId);
   };
 
-  const handleSendMessage = async (useStreaming: boolean = true) => {
+  const handleSendMessage = async () => {
     if (!selectedConversationId || !message.trim()) return;
 
     const messageContent = message.trim();
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      conversation_id: selectedConversationId,
+      role: 'user',
+      content: messageContent,
+      input_tokens: messageContent.length,
+      output_tokens: 0,
+      created_at: new Date().toISOString()
+    };
+
+    const { currentConversation } = useChatStore.getState();
+    if (currentConversation) {
+      const updatedConversation = {
+        ...currentConversation,
+        messages: [...currentConversation.messages, userMessage],
+      };
+      useChatStore.setState({ currentConversation: updatedConversation });
+    }
+
     setMessage('');
-    setIsStreaming(useStreaming);
+    setIsStreaming(true);
+
+    const controller = new AbortController();
+    setAbortController(controller);
 
     try {
-      if (useStreaming) {
-        // Streaming implementation
-        const reader = await apiClient.streamMessage(selectedConversationId, messageContent);
-        if (!reader) {
-          throw new Error('Failed to start streaming');
-        }
-        const decoder = new TextDecoder();
+      const reader = await apiClient.streamMessage(selectedConversationId, messageContent);
+      if (!reader) throw new Error('Failed to start streaming');
 
-        let fullMessage = '';
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+      const decoder = new TextDecoder();
+      let fullMessage = '';
+      let aiMessageId = `ai-${Date.now()}`;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+      const initialAiMessage: Message = {
+        id: aiMessageId,
+        conversation_id: selectedConversationId,
+        role: 'assistant',
+        content: '',
+        input_tokens: messageContent.length,
+        output_tokens: 0,
+        created_at: new Date().toISOString()
+      };
 
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                const data = line.slice(6);
-                if (data === '[DONE]') continue;
+      const { currentConversation: convAfterUser } = useChatStore.getState();
+      if (convAfterUser) {
+        const updatedConversation = {
+          ...convAfterUser,
+          messages: [...convAfterUser.messages, initialAiMessage]
+        };
+        useChatStore.setState({ currentConversation: updatedConversation });
+      }
 
-                try {
-                  const parsed = JSON.parse(data);
-                  if (parsed.content) {
-                    fullMessage += parsed.content;
-                    setStreamingMessage(fullMessage);
-                  }
-                } catch (e) {
-                  console.error('Failed to parse streaming data:', e);
+      while (true) {
+        if (controller.signal.aborted) break;
+
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.content) {
+                fullMessage += parsed.content;
+                setStreamingMessage(fullMessage);
+
+                const { currentConversation } = useChatStore.getState();
+                if (currentConversation) {
+                  const updatedMessages = currentConversation.messages.map(msg =>
+                    msg.id === aiMessageId
+                      ? { ...msg, content: fullMessage, output_tokens: fullMessage.length }
+                      : msg
+                  );
+
+                  useChatStore.setState({
+                    currentConversation: {
+                      ...currentConversation,
+                      messages: updatedMessages,
+                    }
+                  });
                 }
               }
+            } catch (e) {
+              console.error('Parse error:', e);
             }
           }
-        } finally {
-          reader.releaseLock();
         }
-
-        setStreamingMessage('');
-        setIsStreaming(false);
-        await loadConversations(); // Refresh conversations
-      } else {
-        // Regular non-streaming response
-        await sendMessage(selectedConversationId, messageContent);
       }
+
+      setStreamingMessage('');
+      setIsStreaming(false);
+      setAbortController(null);
+      await loadConversations();
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Send failed:', error);
+      setIsStreaming(false);
+      setStreamingMessage('');
+      setAbortController(null);
+    }
+  };
+
+  const handleStopGeneration = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
       setIsStreaming(false);
       setStreamingMessage('');
     }
   };
 
   const handleDeleteConversation = async (conversationId: string) => {
-    if (confirm('Are you sure you want to delete this conversation?')) {
+    if (confirm('Delete this conversation?')) {
       try {
         await deleteConversation(conversationId);
         if (selectedConversationId === conversationId) {
           setSelectedConversationId(null);
         }
       } catch (error) {
-        console.error('Failed to delete conversation:', error);
+        console.error('Delete failed:', error);
       }
     }
   };
@@ -134,267 +226,352 @@ export default function ChatPage() {
     }
   };
 
+  const filteredConversations = conversations.filter(c =>
+    searchQuery === '' ||
+    c.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex h-full gap-4 p-4">
-      {/* Conversations Panel - Algo Trading Style */}
-      <div className="w-80 space-y-4">
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
+      {/* CONTROL PANEL */}
+      <div className="w-80 space-y-4 flex-shrink-0">
+        {/* Tool Header */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+            Back
+          </Link>
+          <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
+            <MessageSquare className="h-5 w-5 text-blue-400" />
+            Chat
+          </h2>
+          <p className="text-sm text-slate-400 mt-1">AI conversations & assistance</p>
+        </Card>
+
+        {/* Conversations List */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center">
-                <MessageSquare className="h-5 w-5 mr-2 text-primary" />
-                Conversations
-              </CardTitle>
+              <h3 className="text-sm font-medium text-white">Conversations</h3>
               <Button
                 onClick={handleCreateConversation}
                 size="sm"
                 variant="futuristic"
+                className="h-7 px-2"
               >
-                <Plus className="h-4 w-4 mr-1" />
+                <Plus className="h-3.5 w-3.5 mr-1" />
                 New
               </Button>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {conversations.map((conversation) => (
-              <div
-                key={conversation.id}
-                className={`group relative p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
-                  selectedConversationId === conversation.id
-                    ? 'bg-primary/20 border-primary/50 glow'
-                    : 'bg-card/50 border-border/50 hover:bg-accent/50 glass'
-                }`}
-                onClick={() => handleSelectConversation(conversation.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {conversation.title || 'Untitled Chat'}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(conversation.updated_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-destructive hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteConversation(conversation.id);
-                    }}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            ))}
 
-            {conversations.length === 0 && (
-              <div className="text-center py-8">
-                <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-muted-foreground">No conversations yet</p>
-                <p className="text-sm text-muted-foreground/70">Create your first chat</p>
-              </div>
-            )}
-          </CardContent>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-sm bg-slate-900/50 border-slate-700/50"
+              />
+            </div>
+          </div>
         </Card>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            title="Total Chats"
-            value={conversations.length}
-            icon={MessageSquare}
-            className="p-3"
-          />
-          <MetricCard
-            title="Active"
-            value={selectedConversationId ? 1 : 0}
-            icon={Activity}
-            className="p-3"
-          />
+        {/* Conversation Cards */}
+        <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+          {filteredConversations.map((conversation) => (
+            <Card
+              key={conversation.id}
+              className={`liquid-glass p-2.5 cursor-pointer transition-all hover:scale-[1.02] group ${
+                selectedConversationId === conversation.id
+                  ? 'border-blue-500/50 bg-blue-500/10'
+                  : 'border-slate-800/50'
+              }`}
+              onClick={() => handleSelectConversation(conversation.id)}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">
+                    {conversation.title || 'Untitled'}
+                  </p>
+                   <p className="text-xs text-slate-400 truncate mt-0.5">
+                     {conversation.updated_at ? 'Last updated ' + new Date(conversation.updated_at).toLocaleDateString() : 'No activity'}
+                   </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {new Date(conversation.updated_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteConversation(conversation.id);
+                  }}
+                >
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+
+          {filteredConversations.length === 0 && !isLoading && (
+            <div className="text-center py-8">
+              <MessageSquare className="h-10 w-10 mx-auto mb-3 text-slate-400/50" />
+              <p className="text-sm text-slate-400">No chats yet</p>
+            </div>
+          )}
         </div>
+
+        {/* Context */}
+        <Card className="liquid-glass bg-slate-900/80 p-4">
+          <h3 className="text-sm font-medium text-white mb-3">Features</h3>
+          <div className="space-y-2 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <Zap className="h-3.5 w-3.5 text-blue-400" />
+              <span>Real-time streaming</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bot className="h-3.5 w-3.5 text-purple-400" />
+              <span>Context-aware AI</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-3.5 w-3.5 text-green-400" />
+              <span>Markdown support</span>
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedConversationId && currentConversation ? (
-          <Card className="flex-1 flex flex-col glass-card">
-            <CardHeader className="border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center">
-                  <Bot className="h-5 w-5 mr-2 text-primary" />
-                  {currentConversation.title || 'Chat Session'}
-                </CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="glow" className="status-online">
-                    AI Online
-                  </Badge>
-                  <Badge variant="secondary">
-                    {currentConversation.token_stats?.message_count || 0} messages
-                  </Badge>
+      {/* WORK AREA */}
+      <div className="flex-1 min-w-0">
+        <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {selectedConversationId && currentConversation ? (
+            <>
+              {/* Header */}
+              <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                    <Bot className="h-5 w-5 text-blue-400" />
+                    {currentConversation.title || 'Chat'}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="glow" className="text-xs px-2 py-0.5">
+                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5 animate-pulse" />
+                      Online
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs px-2 py-0.5">
+                      {currentConversation.token_stats?.message_count || 0} msgs
+                    </Badge>
+                  </div>
                 </div>
               </div>
-            </CardHeader>
 
-            {/* Messages Area */}
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <div className="h-full overflow-y-auto p-4 space-y-4">
+              {/* Messages */}
+              <div
+                data-messages-container
+                className="flex-1 overflow-y-auto p-4 space-y-2.5"
+              >
                 {currentConversation.messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${
-                      msg.role === 'user' ? 'justify-end' : 'justify-start'
-                    } animate-fade-in`}
+                    className={`group flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="flex items-start space-x-3 max-w-[80%]">
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                        msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary text-secondary-foreground'
+                    <div className="flex items-start gap-2 max-w-[80%]">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        msg.role === 'user' ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700/50 text-slate-300'
                       }`}>
-                        {msg.role === 'user' ? (
-                          <User className="h-4 w-4" />
-                        ) : (
-                          <Bot className="h-4 w-4" />
-                        )}
+                        {msg.role === 'user' ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
                       </div>
-                      <div className={`p-3 rounded-lg ${
+                      <div className={`relative p-2.5 rounded-lg ${
                         msg.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted glass'
+                          ? 'bg-blue-500/20 border border-blue-500/30'
+                          : 'bg-slate-800/50 border border-slate-700/50'
                       }`}>
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {msg.content}
-                        </p>
-                        {msg.role === 'assistant' && (
-                          <div className="flex items-center mt-2 text-xs opacity-70 space-x-2">
-                            <Zap className="h-3 w-3" />
-                            <span>{msg.input_tokens} in, {msg.output_tokens} out</span>
-                          </div>
-                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="absolute top-1 right-1 h-5 w-5 p-0 opacity-0 group-hover:opacity-100"
+                          onClick={() => navigator.clipboard.writeText(msg.content)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+
+                        <div className="text-sm text-white pr-6">
+                          {msg.role === 'assistant' ? (
+                            <div className="prose prose-sm prose-invert max-w-none">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                rehypePlugins={[rehypeHighlight]}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1.5 text-xs text-slate-400">
+                          <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {msg.role === 'assistant' && (
+                            <span className="flex items-center gap-1">
+                              <Zap className="h-3 w-3" />
+                              {msg.output_tokens}t
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
 
-                {isStreaming && streamingMessage && (
-                  <div className="flex justify-start animate-fade-in">
-                    <div className="flex items-start space-x-3 max-w-[80%]">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                        <Bot className="h-4 w-4" />
-                      </div>
-                      <div className="bg-muted p-3 rounded-lg glass">
-                        <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                          {streamingMessage}
-                        </p>
-                        <div className="flex items-center mt-2 text-xs opacity-70 space-x-2">
-                          <Zap className="h-3 w-3" />
-                          <span>Streaming...</span>
-                          <div className="flex space-x-1">
-                            <div className="animate-pulse-glow w-1 h-1 bg-primary rounded-full"></div>
-                            <div className="animate-pulse-glow w-1 h-1 bg-primary rounded-full animation-delay-100"></div>
-                            <div className="animate-pulse-glow w-1 h-1 bg-primary rounded-full animation-delay-200"></div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {isLoading && !streamingMessage && (
-                  <div className="flex justify-start animate-fade-in">
-                    <div className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center">
-                        <Bot className="h-4 w-4" />
-                      </div>
-                      <div className="bg-muted p-3 rounded-lg glass">
-                        <div className="flex items-center space-x-2">
-                          <div className="animate-pulse-glow w-2 h-2 bg-primary rounded-full"></div>
-                          <div className="animate-pulse-glow w-2 h-2 bg-primary rounded-full animation-delay-100"></div>
-                          <div className="animate-pulse-glow w-2 h-2 bg-primary rounded-full animation-delay-200"></div>
-                          <span className="text-sm ml-2">AI is thinking...</span>
-                        </div>
-                      </div>
+                {isLoading && !isStreaming && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center gap-2 p-2.5 bg-slate-800/50 rounded-lg">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-400" />
+                      <span className="text-sm text-slate-300">Thinking...</span>
                     </div>
                   </div>
                 )}
               </div>
-            </CardContent>
 
-            {/* Input Area */}
-            <div className="border-t border-border/50 p-4">
-              <div className="flex space-x-3">
-                <div className="flex-1 relative">
+              {/* Footer (Input) */}
+              <div className="p-4 border-t border-slate-800/50 flex-shrink-0">
+                {isStreaming && (
+                  <div className="flex items-center justify-between mb-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+                      <span className="text-xs text-slate-300">Generating...</span>
+                    </div>
+                    <Button
+                      onClick={handleStopGeneration}
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-xs border-red-400/50 hover:bg-red-400/10"
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Type your message to AI..."
-                    className="pr-24 glass"
+                    placeholder="Message AI..."
+                    className="flex-1 h-9 text-sm bg-slate-900/50 border-slate-700/50"
                     disabled={isLoading || isStreaming}
                   />
-                  <div className="absolute right-1 top-1 flex space-x-1">
-                    <Button
-                      onClick={() => handleSendMessage()}
-                      disabled={!message.trim() || isLoading || isStreaming}
-                      size="sm"
-                      className="h-8 px-2 text-xs"
-                      variant="cyber"
-                    >
-                      Send
-                    </Button>
-                    <Button
-                      onClick={() => handleSendMessage()}
-                      disabled={!message.trim() || isLoading || isStreaming}
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      variant="futuristic"
-                      title="Stream response"
-                    >
-                      <Zap className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!message.trim() || isLoading || isStreaming}
+                    size="sm"
+                    className="h-9 px-3"
+                    variant="futuristic"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
+                  <span>
+                    {currentConversation.token_stats?.total_tokens || 0} tokens
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" />
+                    Streaming enabled
+                  </span>
                 </div>
               </div>
-
-              {/* Conversation Stats */}
-              {currentConversation && (
-                <div className="flex items-center justify-between mt-3 text-xs text-muted-foreground">
-                  <div className="flex items-center space-x-4">
-                    <span>Messages: {currentConversation.token_stats?.message_count || 0}</span>
-                    <span>Total Tokens: {currentConversation.token_stats?.total_tokens || 0}</span>
+            </>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
+              <div className="max-w-4xl mx-auto space-y-6">
+                {/* Header */}
+                <div className="text-center">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mx-auto mb-3">
+                    <MessageSquare className="h-6 w-6 text-blue-400" />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Activity className="h-3 w-3" />
-                    <span>Real-time AI responses</span>
+                  <h3 className="text-xl font-semibold text-white mb-1">Start a Conversation</h3>
+                  <p className="text-sm text-slate-400">Choose a prompt or create a new chat</p>
+                </div>
+
+                {/* Suggested Prompts Grid */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Suggested Prompts</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      { emoji: '💡', title: 'Explain a concept', prompt: 'Explain quantum computing in simple terms' },
+                      { emoji: '📊', title: 'Analyze data', prompt: 'Help me analyze sales trends from this data' },
+                      { emoji: '✍️', title: 'Write content', prompt: 'Write a professional email about project updates' },
+                      { emoji: '🔍', title: 'Research topic', prompt: 'Research the latest developments in AI' },
+                      { emoji: '🐛', title: 'Debug code', prompt: 'Help me debug this Python error' },
+                      { emoji: '🧠', title: 'Brainstorm ideas', prompt: 'Brainstorm creative marketing campaign ideas' }
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setMessage(item.prompt)}
+                        className="p-4 bg-slate-800/60 hover:scale-[1.02] border border-slate-700/50 hover:border-blue-500/50 rounded-lg text-left transition-all group"
+                      >
+                        <div className="text-2xl mb-2">{item.emoji}</div>
+                        <div className="text-sm font-medium text-white mb-1 group-hover:text-blue-400 transition-colors">
+                          {item.title}
+                        </div>
+                        <div className="text-xs text-slate-400 line-clamp-2">{item.prompt}</div>
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
+
+                {/* Recent Chats */}
+                {conversations.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-300 mb-3">Recent Chats</h4>
+                    <div className="space-y-2">
+                      {conversations.slice(0, 3).map((conv) => (
+                        <button
+                          key={conv.id}
+                          onClick={() => handleSelectConversation(conv.id)}
+                          className="w-full p-3 bg-slate-800/60 hover:scale-[1.02] border border-slate-700/50 hover:border-blue-500/50 rounded-lg text-left transition-all flex items-center gap-3 group"
+                        >
+                          <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <MessageSquare className="h-4 w-4 text-blue-400" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-white truncate group-hover:text-blue-400 transition-colors">
+                              {conv.title || 'Untitled Chat'}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              {new Date(conv.updated_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-slate-400 group-hover:text-blue-400 transition-colors">→</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Chats Message */}
+                {conversations.length === 0 && (
+                  <div className="text-center py-8 px-4 bg-slate-800/30 border border-slate-700/50 rounded-lg">
+                    <p className="text-sm text-slate-400 mb-3">No recent chats yet</p>
+                    <Button
+                      onClick={handleCreateConversation}
+                      variant="futuristic"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Your First Chat
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
-          </Card>
-        ) : (
-          <Card className="flex-1 flex items-center justify-center glass-card">
-            <div className="text-center max-w-md">
-              <Bot className="h-20 w-20 mx-auto mb-6 text-primary glow" />
-              <h3 className="text-2xl font-bold mb-3">Welcome to APE Chat</h3>
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                Start intelligent conversations with AI. Ask questions, get help with tasks,
-                or explore ideas in a conversational interface.
-              </p>
-              <Button
-                onClick={handleCreateConversation}
-                size="lg"
-                variant="futuristic"
-                className="px-8"
-              >
-                <MessageSquare className="h-5 w-5 mr-2" />
-                Start New Conversation
-              </Button>
-            </div>
-          </Card>
-        )}
+          )}
+        </Card>
       </div>
     </div>
   );

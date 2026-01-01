@@ -8,18 +8,24 @@ const Card = React.forwardRef<
     glass?: boolean
     glow?: boolean
   }
->(({ className, glass = false, glow = false, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
-      glass && "glass-card",
-      glow && "glow",
-      className
-    )}
-    {...props}
-  />
-))
+>(({ className, glass = false, glow = false, ...props }, ref) => {
+  // Only apply default bg-card if no custom background class is provided
+  const hasCustomBackground = className?.includes('bg-')
+  
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-lg border text-card-foreground shadow-sm",
+        !hasCustomBackground && "bg-card",
+        glass && "glass-card",
+        glow && "glow",
+        className
+      )}
+      {...props}
+    />
+  )
+})
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<
