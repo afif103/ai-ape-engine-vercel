@@ -82,6 +82,7 @@ export default function BatchProcessingPage() {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [batchJob, setBatchJob] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
   const { user } = useAuthStore();
   const router = useRouter();
 
@@ -490,11 +491,81 @@ export default function BatchProcessingPage() {
                   </div>
                 </div>
 
-                {batchJob.status === 'completed' && (
+                {batchJob.status === 'completed' && !showResults && (
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-white">Processed Files</h3>
                     <div className="text-sm text-slate-400">
-                      All {batchJob.total_files} files processed successfully
+                      All {batchJob.total_files} files processed successfully. Click "View Results" to see details.
+                    </div>
+                  </div>
+                )}
+
+                {showResults && batchJob.files && (
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-medium text-white mb-3">File Results</h3>
+                    <div className="space-y-3">
+                      {batchJob.files.map((file: any, idx: number) => (
+                        <div key={file.id || idx} className="bg-slate-800/30 border border-slate-700/30 rounded-lg p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                file.status === 'completed' ? 'bg-green-500/10 text-green-400' :
+                                file.status === 'failed' ? 'bg-red-500/10 text-red-400' :
+                                'bg-blue-500/10 text-blue-400'
+                              }`}>
+                                {file.status === 'completed' && <CheckCircle className="h-4 w-4" />}
+                                {file.status === 'failed' && <AlertCircle className="h-4 w-4" />}
+                                {file.status === 'processing' && <Loader2 className="h-4 w-4 animate-spin" />}
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium text-white">{file.filename}</div>
+                                <div className="text-xs text-slate-400">
+                                  {(file.size / 1024).toFixed(1)} KB • {file.content_type}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge className={`${
+                              file.status === 'completed' ? 'bg-green-500/20 text-green-300 border-green-500/30' :
+                              file.status === 'failed' ? 'bg-red-500/20 text-red-300 border-red-500/30' :
+                              'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                            }`}>
+                              {file.status}
+                            </Badge>
+                          </div>
+
+                          {file.progress !== undefined && file.progress < 100 && (
+                            <div className="mb-3">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-slate-400">Progress</span>
+                                <span className="text-white">{Math.round(file.progress)}%</span>
+                              </div>
+                              <Progress value={file.progress} className="h-1.5" />
+                            </div>
+                          )}
+
+                          {file.current_step && (
+                            <div className="text-xs text-slate-400 mb-2">
+                              <span className="text-slate-500">Step:</span> {file.current_step}
+                            </div>
+                          )}
+
+                          {file.result && (
+                            <div className="mt-3 p-3 bg-slate-900/50 rounded border border-slate-700/50">
+                              <div className="text-xs font-medium text-slate-300 mb-2">Result</div>
+                              <pre className="text-xs text-slate-400 font-mono overflow-x-auto">
+                                {JSON.stringify(file.result, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {file.error && (
+                            <div className="mt-3 p-3 bg-red-500/10 rounded border border-red-500/30">
+                              <div className="text-xs font-medium text-red-300 mb-1">Error</div>
+                              <div className="text-xs text-red-400">{file.error}</div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -509,8 +580,12 @@ export default function BatchProcessingPage() {
                   Back to Dashboard
                 </Button>
                 {batchJob.status === 'completed' && (
-                  <Button className="flex-1" variant="futuristic">
-                    View Results
+                  <Button 
+                    className="flex-1" 
+                    variant="futuristic"
+                    onClick={() => setShowResults(!showResults)}
+                  >
+                    {showResults ? 'Hide Results' : 'View Results'}
                   </Button>
                 )}
               </div>
