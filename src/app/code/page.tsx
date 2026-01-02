@@ -14,6 +14,9 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet } from '@/components/ui/sheet';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import {
   Code,
   FileText,
@@ -22,7 +25,8 @@ import {
   Zap,
   Copy,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Menu
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -73,6 +77,8 @@ export default function CodePage() {
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [code, setCode] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const modes = [
     { id: 'generate', label: 'Generate', description: 'Create from description', icon: Zap },
@@ -161,311 +167,340 @@ export default function CodePage() {
     navigator.clipboard.writeText(text);
   };
 
-  return (
-    <div className="flex h-full gap-4 p-4">
-      {/* CONTROL PANEL */}
-      <div className="w-80 space-y-4 flex-shrink-0">
-        {/* Tool Header */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back
-          </Link>
-          <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
-            <Code className="h-5 w-5 text-blue-400" />
-            Code Assistant
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">Generate, review & debug code</p>
-        </Card>
+  // Sidebar content component (reusable for desktop and mobile)
+  const SidebarContent = () => (
+    <>
+      {/* Tool Header */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+          Back
+        </Link>
+        <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
+          <Code className="h-5 w-5 text-blue-400" />
+          Code Assistant
+        </h2>
+        <p className="text-sm text-slate-400 mt-1">Generate, review & debug code</p>
+      </Card>
 
-        {/* Mode Switcher */}
-        <Card className="liquid-glass bg-slate-900/80 p-3">
-          <div className="space-y-2">
-            {modes.map(mode => (
-              <button
-                key={mode.id}
-                onClick={() => setActiveMode(mode.id as any)}
-                className={`w-full p-2 rounded-lg border text-left transition-all ${
-                  activeMode === mode.id
-                    ? 'bg-purple-500/20 border-purple-500/50'
-                    : 'border-slate-700/50 hover:scale-[1.02]'
-                }`}
+      {/* Mode Switcher */}
+      <Card className="liquid-glass bg-slate-900/80 p-3">
+        <div className="space-y-2">
+          {modes.map(mode => (
+            <button
+              key={mode.id}
+              onClick={() => {
+                setActiveMode(mode.id as any);
+                if (isMobile) setSidebarOpen(false);
+              }}
+              className={`w-full p-2 rounded-lg border text-left transition-all ${
+                activeMode === mode.id
+                  ? 'bg-purple-500/20 border-purple-500/50'
+                  : 'border-slate-700/50 hover:scale-[1.02]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <mode.icon className={`h-4 w-4 ${activeMode === mode.id ? 'text-purple-400' : 'text-slate-400'}`} />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-white">{mode.label}</div>
+                  <div className="text-xs text-slate-400">{mode.description}</div>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </Card>
+
+      {/* Input Form */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <div className="space-y-3">
+          {activeMode === 'generate' && (
+            <>
+              <div>
+                <Label className="text-sm text-slate-300">Description</Label>
+                <Textarea
+                  {...registerGenerate('description')}
+                  className="mt-1.5 min-h-[100px] glass text-white text-sm"
+                  placeholder="Describe what you want..."
+                />
+                {errorsGenerate.description && (
+                  <p className="text-xs text-red-400 mt-1">{errorsGenerate.description.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Language</Label>
+                <Input
+                  {...registerGenerate('language')}
+                  className="mt-1.5 h-9 glass text-white"
+                  placeholder="python"
+                />
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Context (Optional)</Label>
+                <Textarea
+                  {...registerGenerate('context')}
+                  className="mt-1.5 min-h-[60px] glass text-white text-sm"
+                  placeholder="Additional context..."
+                />
+              </div>
+              <Button
+                onClick={handleSubmitGenerate(handleGenerate)}
+                className="w-full h-9"
+                variant="futuristic"
+                disabled={isLoading}
               >
-                <div className="flex items-center gap-2">
-                  <mode.icon className={`h-4 w-4 ${activeMode === mode.id ? 'text-purple-400' : 'text-slate-400'}`} />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-white">{mode.label}</div>
-                    <div className="text-xs text-slate-400">{mode.description}</div>
-                  </div>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Generate Code
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+
+          {activeMode === 'review' && (
+            <>
+              <div>
+                <Label className="text-sm text-slate-300">Code to Review</Label>
+                <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                  <Editor
+                    height="200px"
+                    language="python"
+                    value={code}
+                    onChange={handleCodeChange}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                    }}
+                  />
                 </div>
-              </button>
-            ))}
+                {errorsReview.code && (
+                  <p className="text-xs text-red-400 mt-1">{errorsReview.code.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Language</Label>
+                <Input
+                  {...registerReview('language')}
+                  className="mt-1.5 h-9 glass text-white"
+                  placeholder="python"
+                />
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Focus (Optional)</Label>
+                <Input
+                  {...registerReview('focus')}
+                  className="mt-1.5 h-9 glass text-white"
+                  placeholder="security, performance..."
+                />
+              </div>
+              <Button
+                onClick={handleSubmitReview(handleReview)}
+                className="w-full h-9"
+                variant="futuristic"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reviewing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Review Code
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+
+          {activeMode === 'explain' && (
+            <>
+              <div>
+                <Label className="text-sm text-slate-300">Code to Explain</Label>
+                <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                  <Editor
+                    height="200px"
+                    language="python"
+                    value={code}
+                    onChange={handleCodeChange}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                    }}
+                  />
+                </div>
+                {errorsExplain.code && (
+                  <p className="text-xs text-red-400 mt-1">{errorsExplain.code.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Language</Label>
+                <Input
+                  {...registerExplain('language')}
+                  className="mt-1.5 h-9 glass text-white"
+                  placeholder="python"
+                />
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Level</Label>
+                <select
+                  {...registerExplain('level')}
+                  className="mt-1.5 w-full h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-white glass"
+                >
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+              <Button
+                onClick={handleSubmitExplain(handleExplain)}
+                className="w-full h-9"
+                variant="futuristic"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Explaining...
+                  </>
+                ) : (
+                  <>
+                    <Lightbulb className="h-4 w-4 mr-2" />
+                    Explain Code
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+
+          {activeMode === 'fix' && (
+            <>
+              <div>
+                <Label className="text-sm text-slate-300">Code with Error</Label>
+                <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
+                  <Editor
+                    height="180px"
+                    language="python"
+                    value={code}
+                    onChange={handleCodeChange}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                    }}
+                  />
+                </div>
+                {errorsFix.code && (
+                  <p className="text-xs text-red-400 mt-1">{errorsFix.code.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Error Message</Label>
+                <Textarea
+                  {...registerFix('error')}
+                  className="mt-1.5 min-h-[70px] glass text-white text-sm font-mono"
+                  placeholder="Paste error here..."
+                />
+                {errorsFix.error && (
+                  <p className="text-xs text-red-400 mt-1">{errorsFix.error.message}</p>
+                )}
+              </div>
+              <div>
+                <Label className="text-sm text-slate-300">Language</Label>
+                <Input
+                  {...registerFix('language')}
+                  className="mt-1.5 h-9 glass text-white"
+                  placeholder="python"
+                />
+              </div>
+              <Button
+                onClick={handleSubmitFix(handleFix)}
+                className="w-full h-9"
+                variant="futuristic"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Fixing...
+                  </>
+                ) : (
+                  <>
+                    <Wrench className="h-4 w-4 mr-2" />
+                    Fix Code
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        </div>
+      </Card>
+
+      {/* Context */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <h3 className="text-sm font-medium text-white mb-3">Features</h3>
+        <div className="space-y-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-blue-400" />
+            <span>Multi-language support</span>
           </div>
-        </Card>
-
-        {/* Input Form */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <div className="space-y-3">
-            {activeMode === 'generate' && (
-              <>
-                <div>
-                  <Label className="text-sm text-slate-300">Description</Label>
-                  <Textarea
-                    {...registerGenerate('description')}
-                    className="mt-1.5 min-h-[100px] glass text-white text-sm"
-                    placeholder="Describe what you want..."
-                  />
-                  {errorsGenerate.description && (
-                    <p className="text-xs text-red-400 mt-1">{errorsGenerate.description.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Language</Label>
-                  <Input
-                    {...registerGenerate('language')}
-                    className="mt-1.5 h-9 glass text-white"
-                    placeholder="python"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Context (Optional)</Label>
-                  <Textarea
-                    {...registerGenerate('context')}
-                    className="mt-1.5 min-h-[60px] glass text-white text-sm"
-                    placeholder="Additional context..."
-                  />
-                </div>
-                <Button
-                  onClick={handleSubmitGenerate(handleGenerate)}
-                  className="w-full h-9"
-                  variant="futuristic"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="h-4 w-4 mr-2" />
-                      Generate Code
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-
-            {activeMode === 'review' && (
-              <>
-                <div>
-                  <Label className="text-sm text-slate-300">Code to Review</Label>
-                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
-                    <Editor
-                      height="200px"
-                      language="python"
-                      value={code}
-                      onChange={handleCodeChange}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        lineNumbers: 'on',
-                        scrollBeyondLastLine: false,
-                      }}
-                    />
-                  </div>
-                  {errorsReview.code && (
-                    <p className="text-xs text-red-400 mt-1">{errorsReview.code.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Language</Label>
-                  <Input
-                    {...registerReview('language')}
-                    className="mt-1.5 h-9 glass text-white"
-                    placeholder="python"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Focus (Optional)</Label>
-                  <Input
-                    {...registerReview('focus')}
-                    className="mt-1.5 h-9 glass text-white"
-                    placeholder="security, performance..."
-                  />
-                </div>
-                <Button
-                  onClick={handleSubmitReview(handleReview)}
-                  className="w-full h-9"
-                  variant="futuristic"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Reviewing...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Review Code
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-
-            {activeMode === 'explain' && (
-              <>
-                <div>
-                  <Label className="text-sm text-slate-300">Code to Explain</Label>
-                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
-                    <Editor
-                      height="200px"
-                      language="python"
-                      value={code}
-                      onChange={handleCodeChange}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        lineNumbers: 'on',
-                        scrollBeyondLastLine: false,
-                      }}
-                    />
-                  </div>
-                  {errorsExplain.code && (
-                    <p className="text-xs text-red-400 mt-1">{errorsExplain.code.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Language</Label>
-                  <Input
-                    {...registerExplain('language')}
-                    className="mt-1.5 h-9 glass text-white"
-                    placeholder="python"
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Level</Label>
-                  <select
-                    {...registerExplain('level')}
-                    className="mt-1.5 w-full h-9 rounded-md border border-slate-700 bg-slate-900/50 px-3 text-sm text-white glass"
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
-                </div>
-                <Button
-                  onClick={handleSubmitExplain(handleExplain)}
-                  className="w-full h-9"
-                  variant="futuristic"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Explaining...
-                    </>
-                  ) : (
-                    <>
-                      <Lightbulb className="h-4 w-4 mr-2" />
-                      Explain Code
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-
-            {activeMode === 'fix' && (
-              <>
-                <div>
-                  <Label className="text-sm text-slate-300">Code with Error</Label>
-                  <div className="mt-1.5 border border-slate-700/50 rounded-lg overflow-hidden">
-                    <Editor
-                      height="180px"
-                      language="python"
-                      value={code}
-                      onChange={handleCodeChange}
-                      theme="vs-dark"
-                      options={{
-                        minimap: { enabled: false },
-                        fontSize: 13,
-                        lineNumbers: 'on',
-                        scrollBeyondLastLine: false,
-                      }}
-                    />
-                  </div>
-                  {errorsFix.code && (
-                    <p className="text-xs text-red-400 mt-1">{errorsFix.code.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Error Message</Label>
-                  <Textarea
-                    {...registerFix('error')}
-                    className="mt-1.5 min-h-[70px] glass text-white text-sm font-mono"
-                    placeholder="Paste error here..."
-                  />
-                  {errorsFix.error && (
-                    <p className="text-xs text-red-400 mt-1">{errorsFix.error.message}</p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm text-slate-300">Language</Label>
-                  <Input
-                    {...registerFix('language')}
-                    className="mt-1.5 h-9 glass text-white"
-                    placeholder="python"
-                  />
-                </div>
-                <Button
-                  onClick={handleSubmitFix(handleFix)}
-                  className="w-full h-9"
-                  variant="futuristic"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Fixing...
-                    </>
-                  ) : (
-                    <>
-                      <Wrench className="h-4 w-4 mr-2" />
-                      Fix Code
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
+          <div className="flex items-center gap-2">
+            <Code className="h-3.5 w-3.5 text-purple-400" />
+            <span>Syntax highlighting</span>
           </div>
-        </Card>
-
-        {/* Context */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <h3 className="text-sm font-medium text-white mb-3">Features</h3>
-          <div className="space-y-2 text-xs text-slate-400">
-            <div className="flex items-center gap-2">
-              <Zap className="h-3.5 w-3.5 text-blue-400" />
-              <span>Multi-language support</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Code className="h-3.5 w-3.5 text-purple-400" />
-              <span>Syntax highlighting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Lightbulb className="h-3.5 w-3.5 text-yellow-400" />
-              <span>Context-aware AI</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Lightbulb className="h-3.5 w-3.5 text-yellow-400" />
+            <span>Context-aware AI</span>
           </div>
-        </Card>
+        </div>
+      </Card>
+    </>
+  );
+
+  return (
+    <>
+    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
+      {/* Hamburger Button - Mobile Only */}
+      {isMobile && (
+        <button 
+          className="hamburger-button hamburger-safe"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6 text-white" />
+        </button>
+      )}
+
+      {/* Desktop Sidebar - Hidden on Mobile */}
+      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
+        <SidebarContent />
       </div>
 
+      {/* Mobile Drawer */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <div className="w-80 space-y-4 h-full overflow-y-auto p-4">
+          <SidebarContent />
+        </div>
+      </Sheet>
+
       {/* WORK AREA */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 w-full md:w-auto min-w-0">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
@@ -681,5 +716,7 @@ export default function CodePage() {
         </Card>
       </div>
     </div>
+    <BottomNav />
+    </>
   );
 }
