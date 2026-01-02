@@ -366,25 +366,25 @@ export default function BatchProcessingPage() {
                     onChange={handleFileSelect}
                     className="hidden"
                     id="mobile-batch-upload"
-                    disabled={isProcessing}
+                    disabled={isUploading}
                   />
                   <label htmlFor="mobile-batch-upload" className="cursor-pointer">
                     <Upload className="h-6 w-6 mx-auto mb-1 text-slate-400" />
                     <p className="text-xs font-medium text-slate-300">
-                      {uploadedFiles.length > 0 ? `${uploadedFiles.length} files selected` : 'Choose Files'}
+                      {files.length > 0 ? `${files.length} files selected` : 'Choose Files'}
                     </p>
                     <p className="text-[10px] text-slate-500 mt-1">Up to 10 files</p>
                   </label>
                 </div>
-                {uploadedFiles.length > 0 && (
+                {files.length > 0 && (
                   <Button
-                    onClick={handleProcessBatch}
+                    onClick={handleSubmit(onSubmit)}
                     className="w-full h-9 text-xs"
                     variant="futuristic"
-                    disabled={isProcessing}
+                    disabled={isUploading}
                   >
-                    {isProcessing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
-                    {isProcessing ? 'Processing...' : `Process ${uploadedFiles.length} Files`}
+                    {isUploading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
+                    {isUploading ? 'Processing...' : `Process ${files.length} Files`}
                   </Button>
                 )}
               </div>
