@@ -363,6 +363,24 @@ export default function ChatPage() {
       {/* WORK AREA */}
       <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium text-white">Chat</h3>
+                <Button
+                  onClick={handleCreateConversation}
+                  size="sm"
+                  variant="futuristic"
+                  className="h-8 px-3 text-xs"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  New Chat
+                </Button>
+              </div>
+            </div>
+          )}
+
           {selectedConversationId && currentConversation ? (
             <>
               {/* Header */}

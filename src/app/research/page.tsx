@@ -323,6 +323,71 @@ export default function ResearchPage() {
       {/* WORK AREA */}
       <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setActiveMode('scrape')}
+                    className={`flex-1 p-2 rounded-lg text-xs font-medium transition-all ${
+                      activeMode === 'scrape' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-slate-800/50 text-slate-300'
+                    }`}
+                  >
+                    <Globe className="h-4 w-4 mx-auto mb-1" />
+                    Scrape
+                  </button>
+                  <button
+                    onClick={() => setActiveMode('research')}
+                    className={`flex-1 p-2 rounded-lg text-xs font-medium transition-all ${
+                      activeMode === 'research' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-slate-800/50 text-slate-300'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4 mx-auto mb-1" />
+                    Research
+                  </button>
+                </div>
+                {activeMode === 'scrape' ? (
+                  <div className="space-y-2">
+                    <Input
+                      {...registerScrape('url')}
+                      className="h-9 text-xs"
+                      placeholder="https://example.com"
+                      disabled={isLoading}
+                    />
+                    <Button
+                      onClick={handleSubmitScrape(onScrape)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Globe className="h-4 w-4 mr-1" />}
+                      Scrape
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Input
+                      {...registerResearch('query')}
+                      className="h-9 text-xs"
+                      placeholder="Enter research topic..."
+                      disabled={isLoading}
+                    />
+                    <Button
+                      onClick={handleSubmitResearch(onResearch)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Search className="h-4 w-4 mr-1" />}
+                      Research
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">

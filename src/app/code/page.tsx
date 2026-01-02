@@ -484,6 +484,31 @@ export default function CodePage() {
       {/* WORK AREA */}
       <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1">
+                  {modes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setActiveMode(mode.id as any)}
+                      className={`p-2 rounded-lg text-[10px] font-medium transition-all ${
+                        activeMode === mode.id ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-slate-800/50 text-slate-300'
+                      }`}
+                    >
+                      <mode.icon className="h-4 w-4 mx-auto mb-0.5" />
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 text-center">
+                  {modes.find(m => m.id === activeMode)?.description}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">

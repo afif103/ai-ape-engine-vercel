@@ -813,6 +813,19 @@ body {
   transform: scale(0.95);
 }
 
+/* Force hide desktop sidebar on mobile - Critical Fix */
+@media (max-width: 767px) {
+  .md\:block {
+    display: none !important;
+  }
+  
+  /* Ensure work area takes full width on mobile */
+  .flex-1.w-full {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+}
+
 /* Mobile Input Improvements */
 @media (max-width: 767px) {
   input,

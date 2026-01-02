@@ -353,6 +353,44 @@ export default function BatchProcessingPage() {
       {/* Right Panel - Status/Results */}
       <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && !batchJob && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-white">Upload Files</h3>
+                <div className="border-2 border-dashed border-slate-600/50 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".txt,.csv,.pdf,.docx,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="mobile-batch-upload"
+                    disabled={isProcessing}
+                  />
+                  <label htmlFor="mobile-batch-upload" className="cursor-pointer">
+                    <Upload className="h-6 w-6 mx-auto mb-1 text-slate-400" />
+                    <p className="text-xs font-medium text-slate-300">
+                      {uploadedFiles.length > 0 ? `${uploadedFiles.length} files selected` : 'Choose Files'}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-1">Up to 10 files</p>
+                  </label>
+                </div>
+                {uploadedFiles.length > 0 && (
+                  <Button
+                    onClick={handleProcessBatch}
+                    className="w-full h-9 text-xs"
+                    variant="futuristic"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
+                    {isProcessing ? 'Processing...' : `Process ${uploadedFiles.length} Files`}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {!batchJob ? (
             <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
               <div className="max-w-4xl mx-auto space-y-6">

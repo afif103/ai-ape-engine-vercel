@@ -282,6 +282,42 @@ export default function ExtractionPage() {
       {/* WORK AREA */}
       <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-white">Upload Document</h3>
+                <div className="border-2 border-dashed border-slate-600/50 rounded-lg p-4 text-center">
+                  <input
+                    type="file"
+                    accept=".txt,.csv,.pdf,.docx,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="mobile-file-upload"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="mobile-file-upload" className={`cursor-pointer ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
+                    <Upload className={`h-6 w-6 mx-auto mb-1 ${uploadedFile ? 'text-green-400' : 'text-slate-400'}`} />
+                    <p className={`text-xs font-medium ${uploadedFile ? 'text-green-300' : 'text-slate-300'}`}>
+                      {uploadedFile ? uploadedFile.name : 'Choose File'}
+                    </p>
+                  </label>
+                </div>
+                {uploadedFile && (
+                  <Button
+                    onClick={handleExtract}
+                    className="w-full h-9 text-xs"
+                    variant="futuristic"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
+                    {isLoading ? 'Extracting...' : 'Extract Data'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">
