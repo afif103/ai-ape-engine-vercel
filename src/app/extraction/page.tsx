@@ -12,17 +12,16 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet } from '@/components/ui/sheet';
 import { BottomNav } from '@/components/ui/bottom-nav';
 import {
-  FileText,
-  Upload,
-  Copy,
   Brain,
-  FileImage,
-  X,
-  ArrowLeft,
-  Loader2,
+  Upload,
+  FileText,
   Download,
-  Table,
-  Menu
+  Copy,
+  Loader2,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+  Zap
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
