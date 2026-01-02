@@ -339,7 +339,7 @@ export default function ResearchPage() {
       </Sheet>
 
       {/* WORK AREA */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">

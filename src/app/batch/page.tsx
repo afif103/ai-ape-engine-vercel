@@ -369,7 +369,7 @@ export default function BatchProcessingPage() {
       </Sheet>
 
       {/* Right Panel - Status/Results */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className="flex-1 w-full md:w-auto">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col">
           {!batchJob ? (
             <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
