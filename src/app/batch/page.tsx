@@ -345,28 +345,10 @@ export default function BatchProcessingPage() {
   return (
     <>
     <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Hamburger Button - Mobile Only */}
-      {isMobile && (
-        <button 
-          className="hamburger-button hamburger-safe"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6 text-white" />
-        </button>
-      )}
-
       {/* Desktop Sidebar - Hidden on Mobile */}
       <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
         <SidebarContent />
       </div>
-
-      {/* Mobile Drawer */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <div className="w-80 space-y-4 h-full overflow-y-auto p-4">
-          <SidebarContent />
-        </div>
-      </Sheet>
 
       {/* Right Panel - Status/Results */}
       <div className="flex-1 w-full md:w-auto">
