@@ -7,6 +7,7 @@ import { useAuthStore } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import {
   MessageSquare,
   Code,
@@ -141,7 +142,8 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden">
+    <>
+    <div className="h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 relative overflow-hidden with-bottom-nav">
       {/* Background Effects */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 right-1/4 w-96 h-96 opacity-20">
@@ -335,5 +337,7 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+    <BottomNav />
+    </>
   );
 }

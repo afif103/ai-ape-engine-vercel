@@ -13,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet } from '@/components/ui/sheet';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import {
   Search,
   Globe,
@@ -23,7 +26,8 @@ import {
   X,
   ArrowLeft,
   Loader2,
-  FileText
+  FileText,
+  Menu
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
@@ -58,6 +62,8 @@ export default function ResearchPage() {
   const [result, setResult] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [urls, setUrls] = useState<string[]>(['']);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const { register: registerScrape, handleSubmit: handleSubmitScrape, formState: { errors: errorsScrape } } = useForm<ScrapeForm>({
     resolver: zodResolver(scrapeSchema),
@@ -117,12 +123,11 @@ export default function ResearchPage() {
     { id: 'research', label: 'Deep Research', description: 'Multi-source AI analysis', icon: BookOpen },
   ];
 
-  return (
-    <div className="flex h-full gap-4 p-4">
-      {/* CONTROL PANEL */}
-      <div className="w-80 space-y-4 flex-shrink-0">
-        {/* Tool Header */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
+  // Sidebar content component (reusable for desktop and mobile)
+  const SidebarContent = () => (
+    <>
+      {/* Tool Header */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
           <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Back
@@ -140,7 +145,10 @@ export default function ResearchPage() {
             {modes.map(mode => (
               <button
                 key={mode.id}
-                onClick={() => setActiveMode(mode.id as any)}
+                onClick={() => {
+                  setActiveMode(mode.id as any);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className={`w-full p-2 rounded-lg border text-left transition-all ${
                   activeMode === mode.id
                     ? 'bg-blue-500/20 border-blue-500/50'
@@ -301,10 +309,37 @@ export default function ResearchPage() {
             </div>
           </div>
         </Card>
+    </>
+  );
+
+  return (
+    <>
+    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
+      {/* Hamburger Button - Mobile Only */}
+      {isMobile && (
+        <button 
+          className="hamburger-button hamburger-safe"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6 text-white" />
+        </button>
+      )}
+
+      {/* Desktop Sidebar - Hidden on Mobile */}
+      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
+        <SidebarContent />
       </div>
 
+      {/* Mobile Drawer */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <div className="w-80 space-y-4 h-full overflow-y-auto p-4">
+          <SidebarContent />
+        </div>
+      </Sheet>
+
       {/* WORK AREA */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 w-full md:w-auto min-w-0">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
@@ -581,5 +616,7 @@ export default function ResearchPage() {
         </Card>
       </div>
     </div>
+    <BottomNav />
+    </>
   );
 }

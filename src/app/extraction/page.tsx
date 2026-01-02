@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet } from '@/components/ui/sheet';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import {
   FileText,
   Upload,
@@ -18,7 +21,8 @@ import {
   ArrowLeft,
   Loader2,
   Download,
-  Table
+  Table,
+  Menu
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -40,6 +44,8 @@ export default function ExtractionPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<string>('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -150,12 +156,11 @@ export default function ExtractionPage() {
     }
   };
 
-  return (
-    <div className="flex h-full gap-4 p-4">
-      {/* CONTROL PANEL */}
-      <div className="w-80 space-y-4 flex-shrink-0">
-        {/* Tool Header */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
+  // Sidebar content component (reusable for desktop and mobile)
+  const SidebarContent = () => (
+    <>
+      {/* Tool Header */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
           <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
             <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             Back
@@ -263,10 +268,37 @@ export default function ExtractionPage() {
             </div>
           </div>
         </Card>
+    </>
+  );
+
+  return (
+    <>
+    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
+      {/* Hamburger Button - Mobile Only */}
+      {isMobile && (
+        <button 
+          className="hamburger-button hamburger-safe"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6 text-white" />
+        </button>
+      )}
+
+      {/* Desktop Sidebar - Hidden on Mobile */}
+      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
+        <SidebarContent />
       </div>
 
+      {/* Mobile Drawer */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <div className="w-80 space-y-4 h-full overflow-y-auto p-4">
+          <SidebarContent />
+        </div>
+      </Sheet>
+
       {/* WORK AREA */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 w-full md:w-auto min-w-0">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
@@ -507,5 +539,7 @@ export default function ExtractionPage() {
         </Card>
       </div>
     </div>
+    <BottomNav />
+    </>
   );
 }

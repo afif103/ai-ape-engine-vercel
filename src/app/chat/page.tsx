@@ -14,6 +14,9 @@ import { apiClient } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet } from '@/components/ui/sheet';
+import { BottomNav } from '@/components/ui/bottom-nav';
 import {
   MessageSquare,
   Send,
@@ -25,7 +28,8 @@ import {
   Search,
   Copy,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Menu
 } from 'lucide-react';
 
 export default function ChatPage() {
@@ -58,6 +62,8 @@ export default function ChatPage() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     loadConversations();
@@ -231,120 +237,149 @@ export default function ChatPage() {
     c.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="flex h-full gap-4 p-4">
-      {/* CONTROL PANEL */}
-      <div className="w-80 space-y-4 flex-shrink-0">
-        {/* Tool Header */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
-            Back
-          </Link>
-          <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-blue-400" />
-            Chat
-          </h2>
-          <p className="text-sm text-slate-400 mt-1">AI conversations & assistance</p>
-        </Card>
+  // Sidebar content component (reusable for desktop and mobile)
+  const SidebarContent = () => (
+    <>
+      {/* Tool Header */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <Link href="/dashboard" className="inline-flex items-center text-sm text-slate-400 hover:text-white transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+          Back
+        </Link>
+        <h2 className="text-lg font-semibold text-white mt-2 flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-blue-400" />
+          Chat
+        </h2>
+        <p className="text-sm text-slate-400 mt-1">AI conversations & assistance</p>
+      </Card>
 
-        {/* Conversations List */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-white">Conversations</h3>
+      {/* Conversations List */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-white">Conversations</h3>
+            <Button
+              onClick={handleCreateConversation}
+              size="sm"
+              variant="futuristic"
+              className="h-7 px-2"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              New
+            </Button>
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-sm bg-slate-900/50 border-slate-700/50"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Conversation Cards */}
+      <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
+        {filteredConversations.map((conversation) => (
+          <Card
+            key={conversation.id}
+            className={`liquid-glass p-2.5 cursor-pointer transition-all hover:scale-[1.02] group ${
+              selectedConversationId === conversation.id
+                ? 'border-blue-500/50 bg-blue-500/10'
+                : 'border-slate-800/50'
+            }`}
+            onClick={() => {
+              handleSelectConversation(conversation.id);
+              if (isMobile) setSidebarOpen(false);
+            }}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {conversation.title || 'Untitled'}
+                </p>
+                <p className="text-xs text-slate-400 truncate mt-0.5">
+                  {conversation.updated_at ? 'Last updated ' + new Date(conversation.updated_at).toLocaleDateString() : 'No activity'}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  {new Date(conversation.updated_at).toLocaleDateString()}
+                </p>
+              </div>
               <Button
-                onClick={handleCreateConversation}
+                variant="ghost"
                 size="sm"
-                variant="futuristic"
-                className="h-7 px-2"
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteConversation(conversation.id);
+                }}
               >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                New
+                <Trash2 className="h-3 w-3" />
               </Button>
             </div>
+          </Card>
+        ))}
 
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-sm bg-slate-900/50 border-slate-700/50"
-              />
-            </div>
+        {filteredConversations.length === 0 && !isLoading && (
+          <div className="text-center py-8">
+            <MessageSquare className="h-10 w-10 mx-auto mb-3 text-slate-400/50" />
+            <p className="text-sm text-slate-400">No chats yet</p>
           </div>
-        </Card>
-
-        {/* Conversation Cards */}
-        <div className="space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto">
-          {filteredConversations.map((conversation) => (
-            <Card
-              key={conversation.id}
-              className={`liquid-glass p-2.5 cursor-pointer transition-all hover:scale-[1.02] group ${
-                selectedConversationId === conversation.id
-                  ? 'border-blue-500/50 bg-blue-500/10'
-                  : 'border-slate-800/50'
-              }`}
-              onClick={() => handleSelectConversation(conversation.id)}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">
-                    {conversation.title || 'Untitled'}
-                  </p>
-                   <p className="text-xs text-slate-400 truncate mt-0.5">
-                     {conversation.updated_at ? 'Last updated ' + new Date(conversation.updated_at).toLocaleDateString() : 'No activity'}
-                   </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    {new Date(conversation.updated_at).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteConversation(conversation.id);
-                  }}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </Card>
-          ))}
-
-          {filteredConversations.length === 0 && !isLoading && (
-            <div className="text-center py-8">
-              <MessageSquare className="h-10 w-10 mx-auto mb-3 text-slate-400/50" />
-              <p className="text-sm text-slate-400">No chats yet</p>
-            </div>
-          )}
-        </div>
-
-        {/* Context */}
-        <Card className="liquid-glass bg-slate-900/80 p-4">
-          <h3 className="text-sm font-medium text-white mb-3">Features</h3>
-          <div className="space-y-2 text-xs text-slate-400">
-            <div className="flex items-center gap-2">
-              <Zap className="h-3.5 w-3.5 text-blue-400" />
-              <span>Real-time streaming</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Bot className="h-3.5 w-3.5 text-purple-400" />
-              <span>Context-aware AI</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MessageSquare className="h-3.5 w-3.5 text-green-400" />
-              <span>Markdown support</span>
-            </div>
-          </div>
-        </Card>
+        )}
       </div>
 
+      {/* Context */}
+      <Card className="liquid-glass bg-slate-900/80 p-4">
+        <h3 className="text-sm font-medium text-white mb-3">Features</h3>
+        <div className="space-y-2 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-blue-400" />
+            <span>Real-time streaming</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Bot className="h-3.5 w-3.5 text-purple-400" />
+            <span>Context-aware AI</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 text-green-400" />
+            <span>Markdown support</span>
+          </div>
+        </div>
+      </Card>
+    </>
+  );
+
+  return (
+    <>
+    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
+      {/* Hamburger Button - Mobile Only */}
+      {isMobile && (
+        <button 
+          className="hamburger-button hamburger-safe"
+          onClick={() => setSidebarOpen(true)}
+          aria-label="Open menu"
+        >
+          <Menu className="h-6 w-6 text-white" />
+        </button>
+      )}
+
+      {/* Desktop Sidebar - Hidden on Mobile */}
+      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
+        <SidebarContent />
+      </div>
+
+      {/* Mobile Drawer */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <div className="w-80 space-y-4 h-full overflow-y-auto p-4">
+          <SidebarContent />
+        </div>
+      </Sheet>
+
       {/* WORK AREA */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 w-full md:w-auto min-w-0">
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {selectedConversationId && currentConversation ? (
             <>
@@ -574,5 +609,7 @@ export default function ChatPage() {
         </Card>
       </div>
     </div>
+    <BottomNav />
+    </>
   );
 }
