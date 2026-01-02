@@ -363,7 +363,7 @@ export default function BatchProcessingPage() {
                     type="file"
                     multiple
                     accept=".txt,.csv,.pdf,.docx,.png,.jpg,.jpeg"
-                    onChange={handleFileUpload}
+                    onChange={handleFileSelect}
                     className="hidden"
                     id="mobile-batch-upload"
                     disabled={isProcessing}
