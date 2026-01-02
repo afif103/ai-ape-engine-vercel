@@ -87,8 +87,11 @@ export default function BatchProcessingPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [batchJob, setBatchJob] = useState<any>(null);
   const [showResults, setShowResults] = useState(false);
+<<<<<<< HEAD
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
+=======
+>>>>>>> 91016b494439b720bd951b11178d3932e366d0c2
   const { user } = useAuthStore();
   const router = useRouter();
 

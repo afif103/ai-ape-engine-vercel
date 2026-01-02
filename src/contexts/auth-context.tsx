@@ -77,6 +77,11 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       checkAuth: async () => {
+        if (typeof window === 'undefined') {
+          set({ isAuthenticated: false, user: null });
+          return;
+        }
+        
         const token = localStorage.getItem('access_token');
         if (!token) {
           set({ isAuthenticated: false, user: null });
@@ -94,8 +99,10 @@ export const useAuthStore = create<AuthStore>()(
           });
         } catch (error) {
           // Token might be expired
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+          }
           set({
             user: null,
             isAuthenticated: false,
