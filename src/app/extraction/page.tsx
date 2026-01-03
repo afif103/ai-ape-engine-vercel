@@ -274,7 +274,7 @@ export default function ExtractionPage() {
 
   return (
     <>
-    <div className="h-full with-bottom-nav">
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
       {/* Desktop Sidebar - Only render on desktop */}
       {!isMobile && (
         <div className="w-80 space-y-4 flex-shrink-0">
@@ -283,7 +283,7 @@ export default function ExtractionPage() {
       )}
 
       {/* WORK AREA */}
-      <div className={isMobile ? 'h-full overflow-y-auto' : 'flex-1'}>
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Mobile: Sticky header with upload */}
           {isMobile && (

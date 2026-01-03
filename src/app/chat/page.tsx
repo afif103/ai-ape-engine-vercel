@@ -92,6 +92,10 @@ export default function ChatPage() {
   const handleSelectConversation = async (conversationId: string) => {
     setSelectedConversationId(conversationId);
     await selectConversation(conversationId);
+    // Close mobile sheet after selection
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -356,7 +360,7 @@ export default function ChatPage() {
 
   return (
     <>
-    <div className="h-full with-bottom-nav">
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
       {/* Desktop Sidebar - Only render on desktop */}
       {!isMobile && (
         <div className="w-80 space-y-4 flex-shrink-0">
@@ -365,13 +369,24 @@ export default function ChatPage() {
       )}
 
       {/* WORK AREA */}
-      <div className={isMobile ? 'h-full overflow-y-auto' : 'flex-1'}>
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Mobile Controls - Show only on mobile */}
           {isMobile && (
-            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="text-sm font-medium text-white">Chat</h3>
+                <div className="flex items-center gap-2">
+                  {/* Hamburger Menu for Conversations */}
+                  <Button
+                    onClick={() => setSidebarOpen(true)}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                  >
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                  <h3 className="text-sm font-medium text-white">Chat</h3>
+                </div>
                 <Button
                   onClick={handleCreateConversation}
                   size="sm"
@@ -379,7 +394,7 @@ export default function ChatPage() {
                   className="h-8 px-3 text-xs"
                 >
                   <Plus className="h-4 w-4 mr-1" />
-                  New Chat
+                  New
                 </Button>
               </div>
             </div>
@@ -494,25 +509,48 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <Input
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Message AI..."
-                    className="flex-1 h-9 text-sm bg-slate-900/50 border-slate-700/50"
-                    disabled={isLoading || isStreaming}
-                  />
-                  <Button
-                    onClick={handleSendMessage}
-                    disabled={!message.trim() || isLoading || isStreaming}
-                    size="sm"
-                    className="h-9 px-3"
-                    variant="futuristic"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
+                {/* WhatsApp-style input (mobile) or normal (desktop) */}
+                {isMobile ? (
+                  <div className="relative w-full">
+                    <Input
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Message AI..."
+                      className="w-full h-12 pr-12 text-sm bg-slate-900/50 border-slate-700/50"
+                      disabled={isLoading || isStreaming}
+                    />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!message.trim() || isLoading || isStreaming}
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-10 w-10 p-0"
+                      variant="futuristic"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Input
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Message AI..."
+                      className="flex-1 h-9 text-sm bg-slate-900/50 border-slate-700/50"
+                      disabled={isLoading || isStreaming}
+                    />
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!message.trim() || isLoading || isStreaming}
+                      size="sm"
+                      className="h-9 px-3"
+                      variant="futuristic"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
                   <span>
@@ -613,6 +651,16 @@ export default function ChatPage() {
         </Card>
       </div>
     </div>
+
+    {/* Mobile Conversations Sheet */}
+    {isMobile && (
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen} side="left">
+        <div className="p-4 space-y-4">
+          <SidebarContent />
+        </div>
+      </Sheet>
+    )}
+
     <BottomNav />
     </>
   );
