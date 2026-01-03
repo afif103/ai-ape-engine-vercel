@@ -26,7 +26,9 @@ import {
   Copy,
   ArrowLeft,
   Loader2,
-  Menu
+  Menu,
+  CheckCircle,
+  Info
 } from 'lucide-react';
 import { apiClient } from '@/lib/api';
 
@@ -486,10 +488,11 @@ export default function CodePage() {
       {/* WORK AREA */}
       <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
-          {/* Mobile: Sticky header with mode selector */}
+          {/* Mobile: Sticky header with mode selector and forms */}
           {isMobile && (
-            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
-              <div className="space-y-2">
+            <div className="p-4 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="space-y-3">
+                {/* Mode Selector */}
                 <div className="grid grid-cols-4 gap-1">
                   {modes.map((mode) => (
                     <button
@@ -504,9 +507,193 @@ export default function CodePage() {
                     </button>
                   ))}
                 </div>
-                <p className="text-[10px] text-slate-400 text-center">
-                  {modes.find(m => m.id === activeMode)?.description}
-                </p>
+
+                {/* Forms */}
+                {activeMode === 'generate' && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <Label className="text-xs text-slate-300">Description</Label>
+                      <Textarea
+                        {...registerGenerate('description')}
+                        className="mt-1 min-h-[60px] text-xs glass"
+                        placeholder="Describe what you want..."
+                        disabled={isLoading}
+                      />
+                      {errorsGenerate.description && (
+                        <p className="text-xs text-red-400">{errorsGenerate.description.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Language</Label>
+                      <Input
+                        {...registerGenerate('language')}
+                        className="mt-1 h-8 text-xs glass"
+                        placeholder="python"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Context (Optional)</Label>
+                      <Textarea
+                        {...registerGenerate('context')}
+                        className="mt-1 min-h-[50px] text-xs glass"
+                        placeholder="Additional context..."
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSubmitGenerate(handleGenerate)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-4 w-4 mr-1" />
+                          Generate Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {activeMode === 'review' && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <Label className="text-xs text-slate-300">Code to Review</Label>
+                      <Textarea
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        className="mt-1 min-h-[100px] text-xs font-mono glass"
+                        placeholder="Paste your code here..."
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Language</Label>
+                      <Input
+                        {...registerReview('language')}
+                        className="mt-1 h-8 text-xs glass"
+                        placeholder="python"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSubmitReview(handleReview)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Reviewing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Review Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {activeMode === 'explain' && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <Label className="text-xs text-slate-300">Code to Explain</Label>
+                      <Textarea
+                        {...registerExplain('code')}
+                        className="mt-1 min-h-[100px] text-xs font-mono glass"
+                        placeholder="Paste your code here..."
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Language</Label>
+                      <Input
+                        {...registerExplain('language')}
+                        className="mt-1 h-8 text-xs glass"
+                        placeholder="python"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSubmitExplain(handleExplain)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Explaining...
+                        </>
+                      ) : (
+                        <>
+                          <Info className="h-4 w-4 mr-1" />
+                          Explain Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
+                {activeMode === 'fix' && (
+                  <div className="space-y-2.5">
+                    <div>
+                      <Label className="text-xs text-slate-300">Broken Code</Label>
+                      <Textarea
+                        {...registerFix('code')}
+                        className="mt-1 min-h-[100px] text-xs font-mono glass"
+                        placeholder="Paste your broken code here..."
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Language</Label>
+                      <Input
+                        {...registerFix('language')}
+                        className="mt-1 h-8 text-xs glass"
+                        placeholder="python"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Error Message (Optional)</Label>
+                      <Textarea
+                        {...registerFix('error')}
+                        className="mt-1 min-h-[50px] text-xs glass"
+                        placeholder="Paste error message..."
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button
+                      onClick={handleSubmitFix(handleFix)}
+                      className="w-full h-9 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Fixing...
+                        </>
+                      ) : (
+                        <>
+                          <Wrench className="h-4 w-4 mr-1" />
+                          Fix Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

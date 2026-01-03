@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/contexts/auth-context';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +29,7 @@ import {
 export default function Dashboard() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -171,28 +173,45 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Card className="liquid-glass p-3">
-                <div className="flex items-center gap-2">
+            {/* Desktop: Cards, Mobile: Compact inline */}
+            {!isMobile ? (
+              <div className="flex items-center gap-3">
+                <Card className="liquid-glass p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <div>
+                      <p className="text-xs text-slate-400">Status</p>
+                      <p className="text-sm font-medium text-white">Online</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="liquid-glass p-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-400" />
+                    <div>
+                      <p className="text-xs text-slate-400">Time</p>
+                      <p className="text-sm font-medium text-white">
+                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <div>
-                    <p className="text-xs text-slate-400">Status</p>
-                    <p className="text-sm font-medium text-white">Online</p>
-                  </div>
+                  <span className="text-slate-300">Online</span>
                 </div>
-              </Card>
-              <Card className="liquid-glass p-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <div>
-                    <p className="text-xs text-slate-400">Time</p>
-                    <p className="text-sm font-medium text-white">
-                      {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+                <span className="text-slate-600">|</span>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="text-slate-300">
+                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-              </Card>
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Quick Launch */}

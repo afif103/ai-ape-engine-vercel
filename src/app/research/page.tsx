@@ -327,8 +327,9 @@ export default function ResearchPage() {
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Mobile: Sticky header with mode selector */}
           {isMobile && (
-            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
-              <div className="space-y-2">
+            <div className="p-4 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="space-y-3">
+                {/* Mode Switcher */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setActiveMode('scrape')}
@@ -349,14 +350,20 @@ export default function ResearchPage() {
                     Research
                   </button>
                 </div>
+
+                {/* Forms */}
                 {activeMode === 'scrape' ? (
                   <div className="space-y-2">
+                    <Label className="text-xs text-slate-300">Website URL</Label>
                     <Input
                       {...registerScrape('url')}
-                      className="h-9 text-xs"
+                      className="h-9 text-xs glass"
                       placeholder="https://example.com"
                       disabled={isLoading}
                     />
+                    {errorsScrape.url && (
+                      <p className="text-xs text-red-400">{errorsScrape.url.message}</p>
+                    )}
                     <Button
                       onClick={handleSubmitScrape(handleScrape)}
                       className="w-full h-9 text-xs"
@@ -364,25 +371,97 @@ export default function ResearchPage() {
                       disabled={isLoading}
                     >
                       {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Globe className="h-4 w-4 mr-1" />}
-                      Scrape
+                      Scrape Website
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    <Input
-                      {...registerResearch('query')}
-                      className="h-9 text-xs"
-                      placeholder="Enter research topic..."
-                      disabled={isLoading}
-                    />
+                  <div className="space-y-2.5">
+                    {/* Research Query */}
+                    <div>
+                      <Label className="text-xs text-slate-300">Research Query</Label>
+                      <Textarea
+                        {...registerResearch('query')}
+                        className="mt-1 min-h-[60px] text-xs glass"
+                        placeholder="What do you want to research?"
+                        disabled={isLoading}
+                      />
+                      {errorsResearch.query && (
+                        <p className="text-xs text-red-400 mt-1">{errorsResearch.query.message}</p>
+                      )}
+                    </div>
+
+                    {/* Source URLs */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-xs text-slate-300">Source URLs (Optional)</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={addUrl}
+                          disabled={urls.length >= 5}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                        {urls.map((url, index) => (
+                          <div key={index} className="flex gap-1.5">
+                            <Input
+                              value={url}
+                              onChange={(e) => updateUrl(index, e.target.value)}
+                              className="flex-1 h-8 text-xs glass"
+                              placeholder="https://example.com"
+                            />
+                            {urls.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUrl(index)}
+                                className="h-8 w-8 p-0 hover:bg-red-500/10 hover:text-red-400"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Max Sources */}
+                    <div>
+                      <Label className="text-xs text-slate-300">Max Sources</Label>
+                      <select
+                        {...registerResearch('maxSources', { valueAsNumber: true })}
+                        className="mt-1 w-full h-8 rounded-md border border-slate-700 bg-slate-900/50 px-2 text-xs text-white glass"
+                      >
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <option key={n} value={n}>{n} source{n > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Start Research Button */}
                     <Button
                       onClick={handleSubmitResearch(handleResearch)}
                       className="w-full h-9 text-xs"
                       variant="futuristic"
                       disabled={isLoading}
                     >
-                      {isLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Search className="h-4 w-4 mr-1" />}
-                      Research
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Researching...
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="h-4 w-4 mr-1" />
+                          Start Research
+                        </>
+                      )}
                     </Button>
                   </div>
                 )}

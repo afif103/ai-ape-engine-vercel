@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { Sidebar } from './sidebar';
+import { MobileHeader } from '@/components/ui/mobile-header';
 import { useAuthStore } from '@/contexts/auth-context';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -22,6 +23,8 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Hide global sidebar on mobile - pages have their own mobile UI */}
       {!isMobile && <Sidebar />}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile header with user controls */}
+        {isMobile && <MobileHeader />}
         <main className="flex-1 overflow-hidden">
           {children}
         </main>
