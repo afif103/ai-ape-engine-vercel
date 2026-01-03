@@ -356,7 +356,7 @@ export default function ResearchPage() {
                       disabled={isLoading}
                     />
                     <Button
-                      onClick={handleSubmitScrape(onScrape)}
+                      onClick={handleSubmitScrape(handleScrape)}
                       className="w-full h-9 text-xs"
                       variant="futuristic"
                       disabled={isLoading}
@@ -374,7 +374,7 @@ export default function ResearchPage() {
                       disabled={isLoading}
                     />
                     <Button
-                      onClick={handleSubmitResearch(onResearch)}
+                      onClick={handleSubmitResearch(handleResearch)}
                       className="w-full h-9 text-xs"
                       variant="futuristic"
                       disabled={isLoading}
