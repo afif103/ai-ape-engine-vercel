@@ -92,6 +92,11 @@ export default function BatchProcessingPage() {
   const { user } = useAuthStore();
   const router = useRouter();
 
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
   const {
     register,
     handleSubmit,
@@ -344,18 +349,20 @@ export default function BatchProcessingPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
+    <div className="h-full with-bottom-nav">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
+      )}
 
       {/* Right Panel - Status/Results */}
-      <div className="flex-1 w-full md:w-auto">
+      <div className={isMobile ? 'h-full overflow-y-auto' : 'flex-1'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col">
-          {/* Mobile Controls - Show only on mobile */}
+          {/* Mobile: Sticky header with upload */}
           {isMobile && !batchJob && (
-            <div className="p-3 border-b border-slate-800/50 bg-slate-900/50 flex-shrink-0">
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-white">Upload Files</h3>
                 <div className="border-2 border-dashed border-slate-600/50 rounded-lg p-4 text-center">

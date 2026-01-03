@@ -46,16 +46,6 @@ export default function ChatPage() {
     deleteConversation,
   } = useChatStore();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/');
-    }
-  }, [isAuthenticated, router]);
-
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
   const [message, setMessage] = useState('');
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [streamingMessage, setStreamingMessage] = useState('');
@@ -66,8 +56,16 @@ export default function ChatPage() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (!isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadConversations();
+    }
+  }, [isAuthenticated, loadConversations]);
 
   useEffect(() => {
     if (currentConversation?.messages) {
@@ -77,6 +75,10 @@ export default function ChatPage() {
       }
     }
   }, [currentConversation?.messages, streamingMessage]);
+
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   const handleCreateConversation = async () => {
     try {
@@ -354,14 +356,16 @@ export default function ChatPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
+    <div className="h-full with-bottom-nav">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
+      )}
 
       {/* WORK AREA */}
-      <div className="flex-1 w-full md:w-auto">
+      <div className={isMobile ? 'h-full overflow-y-auto' : 'flex-1'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
           {/* Mobile Controls - Show only on mobile */}
           {isMobile && (
