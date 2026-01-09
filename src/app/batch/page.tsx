@@ -344,22 +344,13 @@ export default function BatchProcessingPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Hamburger Button - Mobile Only */}
-      {isMobile && (
-        <button 
-          className="hamburger-button hamburger-safe"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6 text-white" />
-        </button>
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
       )}
-
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
 
       {/* Mobile Drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -369,8 +360,26 @@ export default function BatchProcessingPage() {
       </Sheet>
 
       {/* Right Panel - Status/Results */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-medium text-white">Batch Processing</h3>
+                <Button
+                  onClick={() => setSidebarOpen(true)}
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 px-3 text-xs"
+                >
+                  <Menu className="h-4 w-4 mr-1" />
+                  Upload
+                </Button>
+              </div>
+            </div>
+          )}
+
           {!batchJob ? (
             <div className="flex-1 overflow-y-auto p-6 bg-slate-900/50">
               <div className="max-w-4xl mx-auto space-y-6">

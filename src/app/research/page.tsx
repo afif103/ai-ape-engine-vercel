@@ -314,22 +314,13 @@ export default function ResearchPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Hamburger Button - Mobile Only */}
-      {isMobile && (
-        <button 
-          className="hamburger-button hamburger-safe"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6 text-white" />
-        </button>
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
       )}
-
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
 
       {/* Mobile Drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -339,8 +330,143 @@ export default function ResearchPage() {
       </Sheet>
 
       {/* WORK AREA */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-white">Research</h3>
+
+                {/* Mode Switcher */}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setActiveMode('scrape')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      activeMode === 'scrape' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-slate-800/50 text-slate-300'
+                    }`}
+                  >
+                    <Globe className="h-4 w-4 mx-auto mb-0.5" />
+                    Scrape
+                  </button>
+                  <button
+                    onClick={() => setActiveMode('research')}
+                    className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                      activeMode === 'research' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 'bg-slate-800/50 text-slate-300'
+                    }`}
+                  >
+                    <BookOpen className="h-4 w-4 mx-auto mb-0.5" />
+                    Research
+                  </button>
+                </div>
+
+                {/* Forms */}
+                {activeMode === 'scrape' ? (
+                  <div className="space-y-2">
+                    <Input
+                      {...registerScrape('url')}
+                      className="h-8 text-xs glass"
+                      placeholder="https://example.com"
+                      disabled={isLoading}
+                    />
+                    {errorsScrape.url && (
+                      <p className="text-xs text-red-400">{errorsScrape.url.message}</p>
+                    )}
+                    <Button
+                      onClick={handleSubmitScrape(handleScrape)}
+                      className="w-full h-8 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Globe className="h-3.5 w-3.5 mr-1" />}
+                      Scrape Website
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Textarea
+                      {...registerResearch('query')}
+                      className="min-h-[60px] text-xs glass"
+                      placeholder="What do you want to research?"
+                      disabled={isLoading}
+                    />
+                    {errorsResearch.query && (
+                      <p className="text-xs text-red-400">{errorsResearch.query.message}</p>
+                    )}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-xs text-slate-300">Source URLs (Optional)</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={addUrl}
+                          disabled={urls.length >= 5}
+                          className="h-6 px-2 text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                      <div className="space-y-1.5 max-h-20 overflow-y-auto">
+                        {urls.map((url, index) => (
+                          <div key={index} className="flex gap-1.5">
+                            <Input
+                              value={url}
+                              onChange={(e) => updateUrl(index, e.target.value)}
+                              className="flex-1 h-7 text-xs glass"
+                              placeholder="https://example.com"
+                            />
+                            {urls.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeUrl(index)}
+                                className="h-7 w-7 p-0 hover:bg-red-500/10 hover:text-red-400"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-slate-300">Max Sources</Label>
+                      <select
+                        {...registerResearch('maxSources', { valueAsNumber: true })}
+                        className="mt-1 w-full h-7 rounded-md border border-slate-700 bg-slate-900/50 px-2 text-xs text-white glass"
+                      >
+                        {[1, 2, 3, 4, 5].map(n => (
+                          <option key={n} value={n}>{n} source{n > 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <Button
+                      onClick={handleSubmitResearch(handleResearch)}
+                      className="w-full h-8 text-xs"
+                      variant="futuristic"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                          Researching...
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="h-3.5 w-3.5 mr-1" />
+                          Start Research
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">
