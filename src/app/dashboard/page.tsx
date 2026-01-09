@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BottomNav } from '@/components/ui/bottom-nav';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   MessageSquare,
   Code,
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const { user, isAuthenticated } = useAuthStore();
   const router = useRouter();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -165,34 +167,52 @@ export default function Dashboard() {
                   <Bot className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-white">Command Center</h1>
+                  <h1 className={`font-bold text-white ${isMobile ? 'text-xl' : 'text-3xl'}`}>Command Center</h1>
                   <p className="text-sm text-slate-400">Welcome back, {user.name || 'Operator'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Card className="liquid-glass p-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                  <div>
-                    <p className="text-xs text-slate-400">Status</p>
-                    <p className="text-sm font-medium text-white">Online</p>
-                  </div>
+            {/* Status & Time - Different design for mobile */}
+            {isMobile ? (
+              // Mobile: Clean inline design without cards
+              <div className="flex flex-col gap-1.5 items-end">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                  <span className="text-xs font-medium text-green-400">Online</span>
                 </div>
-              </Card>
-              <Card className="liquid-glass p-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-400" />
-                  <div>
-                    <p className="text-xs text-slate-400">Time</p>
-                    <p className="text-sm font-medium text-white">
-                      {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="text-xs font-medium text-slate-300">
+                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-              </Card>
-            </div>
+              </div>
+            ) : (
+              // Desktop: Original card design
+              <div className="flex items-center gap-3">
+                <Card className="liquid-glass p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <div>
+                      <p className="text-xs text-slate-400">Status</p>
+                      <p className="text-sm font-medium text-white">Online</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="liquid-glass p-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-400" />
+                    <div>
+                      <p className="text-xs text-slate-400">Time</p>
+                      <p className="text-sm font-medium text-white">
+                        {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
           </div>
 
           {/* Quick Launch */}
