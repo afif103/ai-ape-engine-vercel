@@ -273,22 +273,13 @@ export default function ExtractionPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Hamburger Button - Mobile Only */}
-      {isMobile && (
-        <button 
-          className="hamburger-button hamburger-safe"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6 text-white" />
-        </button>
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
       )}
-
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
 
       {/* Mobile Drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -298,8 +289,64 @@ export default function ExtractionPage() {
       </Sheet>
 
       {/* WORK AREA */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Upload Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-white">Data Extraction</h3>
+
+                {/* File Upload */}
+                <div className="border-2 border-dashed border-slate-600/50 rounded-lg p-3 text-center">
+                  <input
+                    type="file"
+                    accept=".txt,.csv,.pdf,.docx,.png,.jpg,.jpeg"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="mobile-file-upload"
+                    disabled={isLoading}
+                  />
+                  <label htmlFor="mobile-file-upload" className={`cursor-pointer block ${isLoading ? 'pointer-events-none opacity-50' : ''}`}>
+                    <Upload className={`h-6 w-6 mx-auto mb-1 ${uploadedFile ? 'text-green-400' : 'text-slate-400'}`} />
+                    <p className={`text-xs font-medium ${uploadedFile ? 'text-green-300' : 'text-slate-300'}`}>
+                      {uploadedFile ? uploadedFile.name : 'Choose File'}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      PDF, DOCX, Images (max 10MB)
+                    </p>
+                  </label>
+                </div>
+
+                {uploadError && (
+                  <div className="p-2 bg-red-500/10 border border-red-500/20 rounded text-[10px] text-red-400">
+                    {uploadError}
+                  </div>
+                )}
+
+                {/* Extract Button */}
+                <Button
+                  onClick={handleExtract}
+                  className="w-full h-8 text-xs"
+                  disabled={!uploadedFile || isLoading}
+                  variant="futuristic"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="h-3.5 w-3.5 mr-1" />
+                      Extract Data
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Header */}
           <div className="p-4 border-b border-slate-800/50 flex-shrink-0">
             <div className="flex items-center justify-between">

@@ -354,22 +354,13 @@ export default function ChatPage() {
 
   return (
     <>
-    <div className="flex flex-col md:flex-row h-full gap-2 md:gap-4 p-2 md:p-4 with-bottom-nav">
-      {/* Hamburger Button - Mobile Only */}
-      {isMobile && (
-        <button 
-          className="hamburger-button hamburger-safe"
-          onClick={() => setSidebarOpen(true)}
-          aria-label="Open menu"
-        >
-          <Menu className="h-6 w-6 text-white" />
-        </button>
+    <div className="flex h-full with-bottom-nav overflow-x-hidden">
+      {/* Desktop Sidebar - Only render on desktop */}
+      {!isMobile && (
+        <div className="w-80 space-y-4 flex-shrink-0">
+          <SidebarContent />
+        </div>
       )}
-
-      {/* Desktop Sidebar - Hidden on Mobile */}
-      <div className="hidden md:block md:w-80 space-y-4 flex-shrink-0">
-        <SidebarContent />
-      </div>
 
       {/* Mobile Drawer */}
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -379,8 +370,37 @@ export default function ChatPage() {
       </Sheet>
 
       {/* WORK AREA */}
-      <div className="flex-1 w-full md:w-auto min-w-0">
+      <div className={isMobile ? 'w-full h-full overflow-y-auto' : 'flex-1 overflow-y-auto'}>
         <Card className="h-full liquid-glass bg-slate-900/70 flex flex-col overflow-hidden">
+          {/* Mobile Controls - Show only on mobile */}
+          {isMobile && (
+            <div className="p-3 border-b border-slate-800/50 bg-slate-900/95 flex-shrink-0 sticky top-0 z-10">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  {/* Hamburger Menu for Conversations */}
+                  <Button
+                    onClick={() => setSidebarOpen(true)}
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                  >
+                    <Menu className="h-4 w-4" />
+                  </Button>
+                  <h3 className="text-sm font-medium text-white">Chat</h3>
+                </div>
+                <Button
+                  onClick={handleCreateConversation}
+                  size="sm"
+                  variant="futuristic"
+                  className="h-8 px-3 text-xs"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  New
+                </Button>
+              </div>
+            </div>
+          )}
+
           {selectedConversationId && currentConversation ? (
             <>
               {/* Header */}
