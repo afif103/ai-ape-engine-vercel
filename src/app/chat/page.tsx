@@ -472,7 +472,7 @@ export default function ChatPage() {
               </div>
 
               {/* Footer (Input) */}
-              <div className="p-4 border-t border-slate-800/50 flex-shrink-0">
+              <div className={`p-4 border-t border-slate-800/50 flex-shrink-0 ${isMobile ? 'pb-20' : ''}`}>
                 {isStreaming && (
                   <div className="flex items-center justify-between mb-2 p-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                     <div className="flex items-center gap-2">
